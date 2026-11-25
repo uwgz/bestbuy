@@ -1,7 +1,7 @@
 """Admin accounts (the shop owner and staff)."""
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from ..db import execute, query
+from ..db import execute, now_text, query
 
 MIN_PASSWORD_LENGTH = 10
 
@@ -19,7 +19,7 @@ def all_users():
 
 
 def authenticate(email, password):
-    row = query("SELECT * FROM users WHERE email = ?", ((email or "").strip(),), one=True)
+    row = query("SELECT * FROM users WHERE email = ?", ((email or "").strip().lower(),), one=True)
     # always run a hash check so timing doesn't reveal whether the email exists
     hash_ = row["password_hash"] if row else generate_password_hash("not-a-real-password")
     ok = check_password_hash(hash_, password or "")
@@ -55,4 +55,4 @@ def delete(user_id):
 
 
 def touch_login(user_id):
-    execute("UPDATE users SET last_login_at = datetime('now') WHERE id = ?", (user_id,))
+    execute("UPDATE users SET last_login_at = ? WHERE id = ?", (now_text(), user_id))

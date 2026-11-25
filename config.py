@@ -7,7 +7,7 @@ with safe defaults for local development.
 Hosting on Vercel (detected from the VERCEL variable Vercel sets):
   * the code folder is read-only, so working files go to /tmp
   * photos go to Vercel Blob when a Blob store is connected (BLOB_READ_WRITE_TOKEN / BLOB_STORE_ID)
-  * the database goes to Turso when TURSO_DATABASE_URL and TURSO_AUTH_TOKEN are set
+  * the database is Neon (PostgreSQL) when DATABASE_URL is set to its connection string
   * one request can carry at most 4.5 MB, so photo uploads are kept under that
 """
 import os
@@ -37,9 +37,9 @@ class Config:
     DATABASE = INSTANCE_DIR / "vision.db"
     UPLOAD_DIR = INSTANCE_DIR / "uploads"          # photos added from the admin panel (local storage)
 
-    # Database: local SQLite file, or Turso (hosted SQLite) when both values are set
-    TURSO_DATABASE_URL = os.environ.get("TURSO_DATABASE_URL", "")
-    TURSO_AUTH_TOKEN = os.environ.get("TURSO_AUTH_TOKEN", "")
+    # Database: Neon / PostgreSQL when DATABASE_URL is a postgresql://… address, otherwise the
+    # local SQLite file above. (Vercel's Neon integration sets DATABASE_URL by itself.)
+    DATABASE_URL = os.environ.get("DATABASE_URL") or os.environ.get("POSTGRES_URL") or ""
 
     # Photos: "local" (instance/uploads) or "blob" (Vercel Blob, needs a *public* Blob store)
     MEDIA_STORAGE = os.environ.get("MEDIA_STORAGE") or ("blob" if _blob_configured() else "local")
@@ -71,8 +71,7 @@ class TestingConfig(Config):
     TESTING = True
     SECRET_KEY = "test-secret"
     CSRF_ENABLED = False
-    TURSO_DATABASE_URL = ""
-    TURSO_AUTH_TOKEN = ""
+    DATABASE_URL = ""
     MEDIA_STORAGE = "local"
 
 

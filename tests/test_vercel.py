@@ -1,30 +1,28 @@
-"""The Vercel setup: Turso database + Blob photos (using offline stand-ins from fakes.py)."""
+"""The Vercel setup: Neon (PostgreSQL) database + Blob photos.
+
+Runs on SQLite and on a real PostgreSQL server (see conftest.py); Blob is an offline stand-in."""
 import pytest
 
-from app import create_app
-from conftest import PASSWORD, photo_bytes
-from fakes import FakeBlob, FakeTurso
+from conftest import PASSWORD, make_app, photo_bytes
+from fakes import FakeBlob
 
 
 @pytest.fixture
-def cloud(tmp_path):
-    turso = FakeTurso(tmp_path / "remote.db")
+def cloud(tmp_path, backend, request):
     blob = FakeBlob()
-    app = create_app("testing", INSTANCE_DIR=tmp_path / "inst", TURSO_DATABASE_URL=turso.url,
-                     TURSO_AUTH_TOKEN=FakeTurso.TOKEN, MEDIA_STORAGE="blob", BLOB_CLIENT=blob)
+    app = make_app(tmp_path / "inst", backend, request, MEDIA_STORAGE="blob", BLOB_CLIENT=blob)
     import sample_data
     with app.test_request_context():
         sample_data.load()
     from app.security import _failures
     _failures.clear()
-    yield app, turso, blob
-    turso.stop()
+    yield app, backend, blob
 
 
-def test_database_lives_in_turso(cloud):
-    app, turso, blob = cloud
-    assert not (app.config["DATABASE"]).exists()          # nothing written to the local disk
-    assert turso.requests > 0
+def test_pages_and_blob_photos(cloud):
+    app, backend, blob = cloud
+    if backend == "postgres":
+        assert not app.config["DATABASE"].exists()          # nothing written to a local database file
     client = app.test_client()
     assert client.get("/").status_code == 200
     html = client.get("/shop").get_data(as_text=True)
@@ -34,8 +32,8 @@ def test_database_lives_in_turso(cloud):
     assert FakeBlob.BASE in client.get("/photography").get_data(as_text=True)
 
 
-def test_admin_on_turso_and_blob(cloud):
-    app, turso, blob = cloud
+def test_admin_with_blob_photos(cloud):
+    app, _backend, blob = cloud
     c = app.test_client()
     c.post("/altar/setup", data={"name": "Owner", "email": "o@example.com", "password": PASSWORD, "confirm": PASSWORD})
     before = len(blob.files)
@@ -61,22 +59,29 @@ def test_admin_on_turso_and_blob(cloud):
                      "WHERE p.id IS NULL", one=True)["n"] == 0
 
 
-def test_turso_rows_behave_like_sqlite(cloud):
-    app, _t, _b = cloud
+def test_rows_behave_the_same_on_both_databases(app):
     with app.app_context():
         from app.db import execute, query
-        new_id = execute("INSERT INTO messages (name, email, message) VALUES (?, ?, ?)", ("Eric", "e@x.com", "Hi ✓"))
+        new_id = execute("INSERT INTO messages (name, email, message) VALUES (?, ?, ?)", ("Eric", "e@x.com", "Hi ✓ 100%"))
         row = query("SELECT * FROM messages WHERE id = ?", (new_id,), one=True)
-        assert row["name"] == "Eric" and row[0] == new_id and dict(row)["message"] == "Hi ✓"
-        assert query("SELECT NULL AS n, 1.5 AS f", one=True)["f"] == 1.5
+        assert row["name"] == "Eric" and row[0] == new_id and dict(row)["message"] == "Hi ✓ 100%"
+        assert len(row["created_at"]) == 19                        # "YYYY-MM-DD HH:MM:SS" on both
+        assert query("SELECT 1 AS n FROM messages WHERE name LIKE ?", ("eri%",), one=True)   # case-insensitive
 
 
-def test_turso_errors_are_raised(cloud):
-    app, _t, _b = cloud
-    from app.turso import Error
-    with app.app_context(), pytest.raises(Error):
+def test_database_errors_are_raised(app):
+    with app.app_context(), pytest.raises(Exception):
         from app.db import query
         query("SELECT * FROM no_such_table")
+
+
+def test_postgres_url_is_recognised():
+    from app.postgres import is_postgres_url, translate
+    assert is_postgres_url("postgresql://u:p@ep-x-pooler.us-east-1.aws.neon.tech/neondb?sslmode=require")
+    assert is_postgres_url("postgres://u@h/db") and not is_postgres_url("") and not is_postgres_url("libsql://x")
+    assert translate("INSERT INTO products (name) VALUES (?)") == "INSERT INTO products (name) VALUES (%s) RETURNING id"
+    assert translate("INSERT INTO settings (key, value) VALUES (?, ?)").endswith("(%s, %s)")      # no id column
+    assert translate("SELECT 1 WHERE a LIKE ? AND b = '5%'") == "SELECT 1 WHERE a ILIKE %s AND b = '5%%'"
 
 
 def test_media_url_keeps_blob_addresses(app):
@@ -117,3 +122,22 @@ def test_vercel_limits(monkeypatch):
         importlib.reload(config)
         import app as app_pkg
         importlib.reload(app_pkg)
+
+
+def test_reconnects_after_the_connection_drops(app, backend):
+    """Vercel freezes the site between visits and Neon may close idle connections:
+    the next query must quietly open a new connection."""
+    if backend != "postgres":
+        pytest.skip("PostgreSQL only")
+    with app.app_context():
+        from app.db import get_db, query
+        assert query("SELECT 1 AS n", one=True)["n"] == 1
+        conn = get_db()._conn()
+        pid = conn.cursor().execute("SELECT pg_backend_pid()").fetchone()[0]
+        import pgwire
+        from conftest import PG_URL
+        killer = pgwire.connect(PG_URL)
+        killer.cursor().execute(f"SELECT pg_terminate_backend({pid})")
+        killer.close()
+        assert query("SELECT COUNT(*) AS n FROM products", one=True)["n"] == 5     # works again, new connection
+        assert get_db()._conn().cursor().execute("SELECT pg_backend_pid()").fetchone()[0] != pid

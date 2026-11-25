@@ -112,12 +112,12 @@ def dashboard():
 def _hosting_warnings():
     """On Vercel, local files vanish: say so if the database or photo storage isn't connected."""
     from config import ON_VERCEL
-    from ...db import using_turso
+    from ...db import using_postgres
     if not ON_VERCEL:
         return []
     out = []
-    if not using_turso():
-        out.append("The database isn't connected (TURSO_DATABASE_URL / TURSO_AUTH_TOKEN), so changes are lost when Vercel restarts the site.")
+    if not using_postgres():
+        out.append("The database isn't connected (DATABASE_URL from Neon), so changes are lost when Vercel restarts the site.")
     if current_app.config.get("MEDIA_STORAGE") != "blob":
         out.append("Photo storage isn't connected (Vercel Blob), so uploaded photos are lost when Vercel restarts the site.")
     return out

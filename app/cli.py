@@ -29,7 +29,7 @@ def init_app(app):
     def reset_password(email, password):
         """Set a new password for an existing account."""
         from .db import query
-        row = query("SELECT id FROM users WHERE email = ?", (email.strip(),), one=True)
+        row = query("SELECT id FROM users WHERE email = ?", (email.strip().lower(),), one=True)
         if not row:
             raise click.ClickException("No account with that email.")
         error = users.validate_password(password)

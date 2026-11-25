@@ -7,7 +7,7 @@ Built with Flask (Python). The site starts **empty**: you add everything from th
 
 ## Put it online (GitHub + Vercel)
 
-You need free accounts on **GitHub**, **Vercel** and **Turso** (Turso keeps your data; you can create it from inside Vercel).
+You need free accounts on **GitHub**, **Vercel** and **Neon** (Neon keeps your data; you can create it from inside Vercel).
 
 **1. Upload to GitHub**
 Create an empty repository on github.com, then in this folder:
@@ -24,9 +24,10 @@ vercel.com → **Add New… → Project** → pick the repository → **Deploy**
 Project → **Settings → Environment Variables** → add `SECRET_KEY` with a long random value
 (for example from `python -c "import secrets; print(secrets.token_hex(32))"`).
 
-**4. Connect a database (keeps your products, settings and messages)**
-Project → **Storage** → **Turso** (or create one at turso.tech). Make sure the project has these two variables:
-`TURSO_DATABASE_URL` (looks like `libsql://…turso.io`) and `TURSO_AUTH_TOKEN`.
+**4. Connect the Neon database (keeps your products, settings and messages)**
+Either Project → **Storage** → **Neon** → connect it to the project (Vercel then adds `DATABASE_URL` by itself),
+or add it yourself: Project → **Settings → Environment Variables** → `DATABASE_URL` = your Neon connection
+string (Neon → **Connect**; it starts with `postgresql://`). The tables are created automatically on the first visit.
 
 **5. Connect photo storage (keeps the photos you upload)**
 Project → **Storage → Create → Blob** → choose **Public** → connect it to the project.
@@ -66,7 +67,9 @@ pip install -r requirements.txt
 python run.py
 ```
 
-Open http://127.0.0.1:5000. Data is kept in the `instance/` folder (not uploaded to GitHub).
+Open http://127.0.0.1:5000. Without `DATABASE_URL`, data is kept in a file in the `instance/` folder
+(not uploaded to GitHub). With your Neon `DATABASE_URL` in `.env`, your computer uses the same online
+database as the live site — careful, changes are real.
 
 ---
 
@@ -76,6 +79,8 @@ Open http://127.0.0.1:5000. Data is kept in the `instance/` folder (not uploaded
 - `public/static/` — styles, scripts, logo and images (served directly by Vercel)
 - `tools/brand.py` — redraws every logo file and the logo animation from `tools/emblem.json`
 - `tests/` — automated checks: `pip install -r requirements-dev.txt && python -m pytest`
+  (add `TEST_POSTGRES_URL=postgresql://…` for a throw-away PostgreSQL server to run them on PostgreSQL too)
+- Database: SQLite file locally, PostgreSQL (Neon) when `DATABASE_URL` is set — `app/db.py`, `app/postgres.py`
 - Settings come from environment variables; see `.env.example`
 
 The logo is a licensed design — keep the original purchase file and licence somewhere safe, outside this project.

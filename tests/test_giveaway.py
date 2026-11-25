@@ -128,21 +128,13 @@ def test_rules_page(client):
     assert "3 days" in html and "No purchase needed" in html
 
 
-def test_giveaway_on_turso(tmp_path):
-    from app import create_app
-    from fakes import FakeBlob, FakeTurso
-    turso = FakeTurso(tmp_path / "remote.db")
-    app = create_app("testing", INSTANCE_DIR=tmp_path / "inst", TURSO_DATABASE_URL=turso.url,
-                     TURSO_AUTH_TOKEN=FakeTurso.TOKEN, MEDIA_STORAGE="blob", BLOB_CLIENT=FakeBlob())
-    try:
-        with app.test_request_context():
-            giveaways.start("Speaker", 2, 60, kind="money", amount_cents=5000)
-            from app.db import execute
-            execute("UPDATE giveaway_wins SET win_at = ?", (giveaways.iso(giveaways.now() - timedelta(seconds=1)),))
-            a, b, c = giveaways.try_win("a"), giveaways.try_win("b"), giveaways.try_win("c")
-            assert a and b and a["code"] != b["code"] and c is None
-    finally:
-        turso.stop()
+def test_two_prizes_three_visitors(app):
+    with app.test_request_context():
+        giveaways.start("Speaker", 2, 60, kind="money", amount_cents=5000)
+        from app.db import execute
+        execute("UPDATE giveaway_wins SET win_at = ?", (giveaways.iso(giveaways.now() - timedelta(seconds=1)),))
+        a, b, c = giveaways.try_win("a"), giveaways.try_win("b"), giveaways.try_win("c")
+        assert a and b and a["code"] != b["code"] and c is None
 
 
 # ---------- "Try it yourself" ----------

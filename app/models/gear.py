@@ -25,7 +25,7 @@ def get_by_slug(slug):
 def _unique_slug(name, exclude_id=None):
     base = slugify(name)
     slug, n = base, 2
-    while query("SELECT 1 FROM studio_gear WHERE slug = ? AND id IS NOT ?", (slug, exclude_id), one=True):
+    while query("SELECT 1 FROM studio_gear WHERE slug = ? AND id <> ?", (slug, exclude_id or 0), one=True):
         slug, n = f"{base}-{n}", n + 1
     return slug
 

@@ -2,7 +2,7 @@
 import re
 from datetime import date
 
-from ..db import execute, get_db, query
+from ..db import execute, get_db, now_text, query
 from .. import images
 
 # slug -> (label, icon)
@@ -30,7 +30,7 @@ def slugify(text):
 def unique_slug(name, exclude_id=None):
     base = slugify(name)
     slug, n = base, 2
-    while query("SELECT 1 FROM products WHERE slug = ? AND id IS NOT ?", (slug, exclude_id), one=True):
+    while query("SELECT 1 FROM products WHERE slug = ? AND id <> ?", (slug, exclude_id or 0), one=True):
         slug, n = f"{base}-{n}", n + 1
     return slug
 
@@ -140,11 +140,11 @@ def update(product_id, data):
     if old and "name" in data and data["name"] != old["name"]:
         data["slug"] = unique_slug(data["name"], exclude_id=product_id)   # address follows the new name
     sets = ", ".join(f"{k} = ?" for k in data)
-    execute(f"UPDATE products SET {sets}, updated_at = datetime('now') WHERE id = ?", (*data.values(), product_id))
+    execute(f"UPDATE products SET {sets}, updated_at = ? WHERE id = ?", (*data.values(), now_text(), product_id))
 
 
 def set_active(product_id, active):
-    execute("UPDATE products SET is_active = ?, updated_at = datetime('now') WHERE id = ?", (1 if active else 0, product_id))
+    execute("UPDATE products SET is_active = ?, updated_at = ? WHERE id = ?", (1 if active else 0, now_text(), product_id))
 
 
 def delete(product_id):
