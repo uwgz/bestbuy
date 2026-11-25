@@ -1,0 +1,46 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="adm-head">
+  <div><h1>Hello, {{ g.user.name.split(' ')[0] }}.</h1><p class="muted">Here's your store at a glance.</p></div>
+</div>
+{% for w in hosting_warnings %}<p class="upload-error">{{ w }} See README → “Hosting on Vercel”.</p>{% endfor %}
+
+<div class="stats">
+  <a class="stat" href="{{ url_for('admin.products_list') }}"><b>{{ counts.active }}</b><span>Products live</span></a>
+  <a class="stat" href="{{ url_for('admin.products_list') }}"><b>{{ counts.on_sale }}</b><span>On sale</span></a>
+  <a class="stat" href="{{ url_for('admin.inbox_page') }}"><b>{{ unread.bookings }}</b><span>New bookings</span></a>
+  <a class="stat" href="{{ url_for('admin.inbox_page') }}"><b>{{ unread.messages }}</b><span>New messages</span></a>
+</div>
+
+<h2 class="adm-h2">Quick actions</h2>
+<div class="quick">
+  <a class="quick-item" href="{{ url_for('admin.product_new') }}" data-modal data-modal-title="Add a product">{{ icon("shop") }}<span>Add a product</span></a>
+  <a class="quick-item" href="{{ url_for('admin.portfolio_admin') }}#upload">{{ icon("upload") }}<span>Upload portfolio photos</span></a>
+  <a class="quick-item" href="{{ url_for('admin.services_list') }}">{{ icon("camera") }}<span>Edit studio services</span></a>
+  <a class="quick-item" href="{{ url_for('admin.settings_page') }}">{{ icon("store") }}<span>Store details & hours</span></a>
+</div>
+
+<div class="adm-cols">
+  <section class="card">
+    <div class="card-head"><h2>Discounts running</h2><a href="{{ url_for('admin.products_list') }}">All products</a></div>
+    {% for p in on_sale %}
+      <a class="row-item" href="{{ url_for('admin.product_edit', slug=p.slug) }}">
+        <span class="thumb-sm">{% if p.image %}<img src="{{ p.image }}" alt="">{% else %}{{ icon(p.icon) }}{% endif %}</span>
+        <span class="grow"><b>{{ p.short }}</b><small>−{{ p.discount_percent }}%{% if p.discount_ends %} · until {{ p.discount_ends }}{% endif %}</small></span>
+        <span>{{ p.price|money }}</span>
+      </a>
+    {% else %}
+      <p class="muted small">No discounts right now. Open a product and set a discount % to start a sale.</p>
+    {% endfor %}
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Latest bookings</h2><a href="{{ url_for('admin.inbox_page') }}">Inbox</a></div>
+    {% for b in recent_bookings %}
+      <div class="row-item"><span class="grow"><b>{{ b.name }}</b><small>{{ b.service }} · {{ b.date }}</small></span>{% if not b.is_read %}<span class="dot-new"></span>{% endif %}</div>
+    {% else %}
+      <p class="muted small">No bookings yet.</p>
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

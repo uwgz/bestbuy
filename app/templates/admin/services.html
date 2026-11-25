@@ -1,0 +1,35 @@
+{% extends "admin/base.html" %}
+{% block title %}Studio services{% endblock %}
+{% block content %}
+<div class="adm-head">
+  <div><h1>Studio</h1><p class="muted">What appears on the Photography page and in the booking form.</p></div>
+  <a class="btn" href="{{ url_for('admin.service_edit') }}" data-modal data-modal-title="Add a service">+ Add service</a>
+</div>
+<div class="list">
+  {% for s in items %}
+    <a class="list-row{{ ' is-hidden' if not s.is_active }}" href="{{ url_for('admin.service_edit', slug=s.slug) }}">
+      <span class="thumb-md">{% if s.images %}<img src="{{ s.images[0].url }}" alt="">{% else %}{{ icon(s.icon) }}{% endif %}</span>
+      <span class="grow"><b>{{ s.name }}</b><small>{{ s.price or "No price shown" }} · {{ s.images|length }} photo{{ '' if s.images|length == 1 else 's' }}</small>
+        {% if not s.is_active %}<span class="tags"><em class="tag">Hidden</em></span>{% endif %}</span>
+      <span class="chev">{{ icon("arrow-right") }}</span>
+    </a>
+  {% endfor %}
+</div>
+
+<div class="adm-head" id="gear" style="margin-top: 28px">
+  <div><h2 style="margin:0">Studio gear</h2><p class="muted">Cameras, lenses and tools you use for photo and video work. Shown on the Photography page — not for sale.</p></div>
+  <a class="btn" href="{{ url_for('admin.service_gear_edit') }}" data-modal data-modal-title="Add studio gear">+ Add gear</a>
+</div>
+<div class="list">
+  {% for g in gear_items %}
+    <a class="list-row{{ ' is-hidden' if not g.is_active }}" href="{{ url_for('admin.service_gear_edit', slug=g.slug) }}">
+      <span class="thumb-md">{% if g.image %}<img src="{{ g.image }}" alt="">{% else %}{{ icon("camera") }}{% endif %}</span>
+      <span class="grow"><b>{{ g.name }}</b><small>{{ g.role or '—' }}</small>
+        {% if not g.is_active %}<span class="tags"><em class="tag">Hidden</em></span>{% endif %}</span>
+      <span class="chev">{{ icon("arrow-right") }}</span>
+    </a>
+  {% else %}
+    <div class="empty">No gear yet. Add the equipment you use in the studio.</div>
+  {% endfor %}
+</div>
+{% endblock %}

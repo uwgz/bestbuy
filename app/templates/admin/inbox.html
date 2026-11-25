@@ -1,0 +1,37 @@
+{% extends "admin/base.html" %}
+{% block title %}Inbox{% endblock %}
+{% block content %}
+<div class="adm-head"><div><h1>Inbox</h1><p class="muted">Booking requests and messages from the website.</p></div></div>
+
+<section class="card">
+  <h2>Bookings ({{ bookings|length }})</h2>
+  {% for b in bookings %}
+    <article class="msg{{ ' is-new' if not b.is_read }}">
+      <div class="msg-head">
+        <b>{{ b.name }}</b>{% if not b.is_read %}<em class="tag tag-sale">New</em>{% endif %}
+        <span class="muted small">{{ b.created_at[:16] }}</span>
+      </div>
+      <p><b>{{ services.get(b.service, b.service) }}</b> · preferred date {{ b.date }}</p>
+      <p class="small"><a href="mailto:{{ b.email }}">{{ b.email }}</a>{% if b.phone %} · <a href="tel:{{ b.phone }}">{{ b.phone }}</a>{% endif %}</p>
+      {% if b.notes %}<p class="msg-body">{{ b.notes }}</p>{% endif %}
+      <form method="post" action="{{ url_for('admin.inbox_delete', kind='booking', item_id=b.id) }}" data-confirm="Delete this booking?">{{ csrf_field() }}<button class="link-btn" type="submit">Delete</button></form>
+    </article>
+  {% else %}<p class="muted small">No bookings yet.</p>{% endfor %}
+</section>
+
+<section class="card">
+  <h2>Messages ({{ messages|length }})</h2>
+  {% for m in messages %}
+    <article class="msg{{ ' is-new' if not m.is_read }}">
+      <div class="msg-head">
+        <b>{{ m.name }}</b>{% if not m.is_read %}<em class="tag tag-sale">New</em>{% endif %}
+        <span class="muted small">{{ m.created_at[:16] }}</span>
+      </div>
+      {% if m.subject %}<p><b>{{ m.subject }}</b></p>{% endif %}
+      <p class="msg-body">{{ m.message }}</p>
+      <p class="small"><a href="mailto:{{ m.email }}?subject=Re: {{ m.subject or 'Your message' }}">Reply to {{ m.email }}</a></p>
+      <form method="post" action="{{ url_for('admin.inbox_delete', kind='message', item_id=m.id) }}" data-confirm="Delete this message?">{{ csrf_field() }}<button class="link-btn" type="submit">Delete</button></form>
+    </article>
+  {% else %}<p class="muted small">No messages yet.</p>{% endfor %}
+</section>
+{% endblock %}

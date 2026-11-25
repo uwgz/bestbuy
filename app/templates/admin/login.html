@@ -1,0 +1,18 @@
+{% extends "admin/base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block content %}
+<div class="auth">
+  <button class="tb-icon theme-toggle auth-theme" type="button" aria-label="Switch light/dark">
+    <span class="when-light">{{ icon("moon") }}</span><span class="when-dark">{{ icon("sun") }}</span>
+  </button>
+  <img class="auth-mark" src="{{ url_for('static', filename='img/brand/logo-mark-white.svg') }}" alt="" width="40" height="40">
+  <h1>Sign in</h1>
+  <p class="muted">Manage products, photos, prices and bookings.</p>
+  <form method="post" class="auth-form">{{ csrf_field() }}
+    <label>Email<input type="email" name="email" value="{{ email }}" autocomplete="username" required autofocus></label>
+    <label>Password<input type="password" name="password" autocomplete="current-password" required></label>
+    <button class="btn btn-block" type="submit">Sign in</button>
+  </form>
+  <a class="auth-back" href="{{ url_for('main.home') }}">← Back to {{ business.name }}</a>
+</div>
+{% endblock %}

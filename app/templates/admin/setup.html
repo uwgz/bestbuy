@@ -1,0 +1,19 @@
+{% extends "admin/base.html" %}
+{% block title %}Set up{% endblock %}
+{% block content %}
+<div class="auth">
+  <button class="tb-icon theme-toggle auth-theme" type="button" aria-label="Switch light/dark">
+    <span class="when-light">{{ icon("moon") }}</span><span class="when-dark">{{ icon("sun") }}</span>
+  </button>
+  <img class="auth-mark" src="{{ url_for('static', filename='img/brand/logo-mark-white.svg') }}" alt="" width="40" height="40">
+  <h1>Welcome</h1>
+  <p class="muted">Create the owner account. This page only appears once — after that, sign in at <b>/altar/login</b>.</p>
+  <form method="post" class="auth-form">{{ csrf_field() }}
+    <label>Your name<input name="name" value="{{ form.get('name', '') }}" autocomplete="name" required autofocus></label>
+    <label>Email<input type="email" name="email" value="{{ form.get('email', '') }}" autocomplete="username" required></label>
+    <label>Password <small>(at least 10 characters)</small><input type="password" name="password" autocomplete="new-password" minlength="10" required></label>
+    <label>Confirm password<input type="password" name="confirm" autocomplete="new-password" minlength="10" required></label>
+    <button class="btn btn-block" type="submit">Create account</button>
+  </form>
+</div>
+{% endblock %}

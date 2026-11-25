@@ -1,0 +1,12 @@
+[project]
+name = "vision-electronics"
+version = "1.0.0"
+description = "Vision Electronics — electronics store and photography studio website (Flask)"
+requires-python = ">=3.10"
+
+[tool.vercel]
+# Vercel runs the Flask `app` defined in wsgi.py
+entrypoint = "wsgi:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

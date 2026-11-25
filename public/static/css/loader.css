@@ -1,0 +1,14 @@
+/* Loading screen — used by the website and the admin panel */
+.page-loader { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
+  background: rgba(255, 255, 255, .72); -webkit-backdrop-filter: saturate(160%) blur(14px); backdrop-filter: saturate(160%) blur(14px);
+  color: #1d1d1f; opacity: 0; transition: opacity .25s ease; pointer-events: none; }
+.page-loader.show { opacity: 1; pointer-events: auto; }
+.page-loader[hidden] { display: none; }
+.pl-box { display: grid; justify-items: center; gap: 14px; }
+.loader-mark { width: 92px; height: 92px; }
+.pl-text { font: 500 13px/1 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; letter-spacing: .02em; opacity: .6; }
+
+:root[data-theme="dark"] .page-loader { background: rgba(0, 0, 0, .66); color: #f5f5f7; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .page-loader { background: rgba(0, 0, 0, .66); color: #f5f5f7; }
+}

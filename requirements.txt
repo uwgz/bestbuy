@@ -1,0 +1,4 @@
+Flask>=3.0,<4
+Pillow>=10.0
+python-dotenv>=1.0
+vercel>=0.5,<1

@@ -1,0 +1,114 @@
+{% extends "layouts/base.html" %}
+{% block title %}Photography Services{% endblock %}
+{% block content %}
+<section class="page-head">
+  <div class="container">
+    <p class="eyebrow">Vision Studio</p>
+    <h1>Photography.</h1>
+    <p class="muted">Portraits, weddings, products and prints — by photographers who love what they do.</p>
+  </div>
+  <nav class="container chips svc-jump" aria-label="Services">
+    {% for s in services %}<a class="chip" href="#{{ s.slug }}">{{ s.name }}</a>{% endfor %}
+    <a class="chip" href="#portfolio">Portfolio</a>
+  </nav>
+</section>
+
+{% for s in services %}
+<section class="svc{{ ' section-alt' if loop.index is even }}" id="{{ s.slug }}">
+  <div class="container svc-inner{{ ' flip' if loop.index is even }}">
+    <div class="svc-gallery">
+      {% if not s.images %}<div class="svc-empty">{{ icon(s.icon) }}</div>{% endif %}
+      <div class="svc-track">
+        {% for img in s.images %}
+          <img src="{{ img.url }}" alt="{{ img.alt }}" loading="{{ 'eager' if loop.first else 'lazy' }}">
+        {% endfor %}
+      </div>
+      {% if s.images|length > 1 %}
+        <div class="svc-dots">
+          {% for img in s.images %}<button type="button" class="svc-dot{{ ' active' if loop.first }}" aria-label="Photo {{ loop.index }} of {{ s.images|length }}"></button>{% endfor %}
+        </div>
+      {% endif %}
+    </div>
+    <div class="svc-copy">
+      <p class="svc-name">{{ icon(s.icon) }} {{ s.name }}</p>
+      <h2>{{ s.tagline }}</h2>
+      <p class="lead">{{ s.description }}</p>
+      <ul class="includes">{% for i in s.includes_list %}<li>{{ icon("check") }} {{ i }}</li>{% endfor %}</ul>
+      <p class="svc-price">{{ s.price }}</p>
+      <div class="svc-links">
+        <a href="{{ url_for('studio.book', service=s.slug) }}" class="btn">Book now</a>
+        <a href="{{ url_for('main.contact') }}" class="btn btn-outline">Ask a question</a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endfor %}
+
+{% if gear %}
+<section class="section" id="gear">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Our kit</p>
+        <h2>The gear behind our shots</h2>
+      </div>
+    </div>
+    <p class="muted gear-intro">Every session is shot and edited with professional equipment.</p>
+    <div class="gear-grid">
+      {% for g in gear %}
+        <div class="gear-card">
+          <div class="gear-img">
+            {% if g.image %}<img src="{{ g.image }}" alt="{{ g.name }}" loading="lazy">{% else %}<span class="ph">{{ icon("camera") }}</span>{% endif %}
+            {% if g.role %}<em class="gear-role">{{ g.role }}</em>{% endif %}
+          </div>
+          <div class="gear-body">
+            <h3>{{ g.name }}</h3>
+            {% if g.description %}<p class="gear-desc">{{ g.description }}</p>{% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<section class="section">
+  <div class="container steps">
+    <h2>How it works</h2>
+    <ol>
+      <li><b>Book</b><span>Pick a service and a date that works for you.</span></li>
+      <li><b>Plan</b><span>We'll call to talk through your ideas, location and style.</span></li>
+      <li><b>Shoot</b><span>Relax — we'll guide you through the session.</span></li>
+      <li><b>Deliver</b><span>Edited photos in a private online gallery within a week.</span></li>
+    </ol>
+  </div>
+</section>
+
+{# ---------- Portfolio: recent work (Admin → Portfolio) ---------- #}
+{% if work %}
+<section class="section section-alt" id="portfolio">
+  <div class="container">
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Portfolio</p>
+        <h2>Recent work.</h2>
+      </div>
+      <a href="{{ url_for('studio.portfolio_page') }}">See all {{ icon("arrow-right") }}</a>
+    </div>
+    {% if work_cats|length > 1 %}
+      <div class="chips" id="portfolio-filter">
+        <button class="chip active" data-filter="all">All</button>
+        {% for c in work_cats %}<button class="chip" data-filter="{{ c }}">{{ c }}</button>{% endfor %}
+      </div>
+    {% endif %}
+    <div class="gallery">
+      {% for item in work %}{% include "partials/gallery_item.html" %}{% endfor %}
+    </div>
+    <div class="portfolio-cta">
+      <a class="btn btn-outline" href="{{ url_for('studio.portfolio_page') }}">View full portfolio</a>
+      <a class="btn" href="{{ url_for('studio.book') }}">Book a session</a>
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

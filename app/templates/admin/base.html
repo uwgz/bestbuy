@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>{% block title %}Admin{% endblock %} · {{ business.name }}</title>
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <script>
+    // apply saved theme + sidebar state before paint (no flicker)
+    (function () {
+      try {
+        // one day/night choice shared with the website (same browser, until the tab is closed), else the device setting
+        var t = sessionStorage.getItem("theme") || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        document.documentElement.dataset.theme = t;
+        if (localStorage.getItem("adm-collapsed") === "1") document.documentElement.classList.add("sb-collapsed");
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/loader.css') }}">
+</head>
+<body class="admin{{ ' signed-in' if g.user }}" data-upload-limit="{{ config.UPLOAD_REQUEST_LIMIT }}">
+  {% include "partials/loader.html" %}
+  {% set ep = request.endpoint or '' %}
+  {% if g.user %}
+  {% set nav = [('admin.dashboard','Dashboard','home','admin.dashboard'),
+                ('admin.products_list','Products','shop','admin.product'),
+                ('admin.services_list','Studio','camera','admin.service'),
+                ('admin.portfolio_admin','Portfolio','image','admin.portfolio'),
+                ('admin.inbox_page','Inbox','mail','admin.inbox'),
+                ('admin.giveaway','Giveaway','gift','admin.giveaway'),
+                ('admin.settings_page','Store details','store','admin.settings'),
+                ('admin.account','Account','user','admin.account')] %}
+
+  <header class="topbar">
+    <a class="tb-brand" href="{{ url_for('admin.dashboard') }}">
+      <img class="tb-logo" src="{{ url_for('static', filename='img/brand/logo-mark-white.svg') }}" alt="" width="34" height="34">
+      <span class="tb-divider" aria-hidden="true"></span>
+      <span class="tb-name"><span class="tb-full">{{ business.name }}</span><span class="tb-short">{{ business.name.split(' ')[0] }}</span></span>
+      <span class="tb-handle">Admin</span>
+    </a>
+    <div class="tb-right">
+      <a class="tb-icon" href="{{ url_for('main.home') }}" target="_blank" rel="noopener" title="View website" aria-label="View website">{{ icon("external") }}</a>
+      <button class="tb-icon theme-toggle" type="button" aria-label="Switch light/dark">
+        <span class="when-light">{{ icon("moon") }}</span><span class="when-dark">{{ icon("sun") }}</span>
+      </button>
+      <a class="tb-icon tb-bell" href="{{ url_for('admin.inbox_page') }}" aria-label="Inbox{% if unread and unread.total %}, {{ unread.total }} new{% endif %}" title="Inbox">
+        {{ icon("bell") }}{% if unread and unread.total %}<b>{{ unread.total }}</b>{% endif %}
+      </a>
+      <details class="tb-user">
+        <summary>
+          <span class="avatar">{{ g.user.name[:1]|upper }}</span>
+          <span class="tb-username">{{ g.user.name.split(' ')[0] }}</span>
+          {{ icon("chevron-down") }}
+        </summary>
+        <div class="tb-menu">
+          <div class="tb-menu-head"><b>{{ g.user.name }}</b><small>{{ g.user.email }}</small></div>
+          <a href="{{ url_for('admin.account') }}">{{ icon("user") }} Account & password</a>
+          <a href="{{ url_for('main.home') }}" target="_blank" rel="noopener">{{ icon("external") }} View website</a>
+          <form method="post" action="{{ url_for('admin.logout') }}">{{ csrf_field() }}<button type="submit">{{ icon("logout") }} Sign out</button></form>
+        </div>
+      </details>
+    </div>
+  </header>
+
+  <aside class="sidebar" id="sidebar">
+    <nav aria-label="Admin">
+      {% for endpoint, label, ico, prefix in nav %}
+        {% if loop.index in (3, 6) %}<hr class="sb-sep">{% endif %}
+        <a href="{{ url_for(endpoint) }}" class="sb-link{{ ' active' if ep.startswith(prefix) }}" data-label="{{ label }}" title="{{ label }}">
+          {{ icon(ico) }}<span class="sb-text">{{ label }}</span>
+          {% if endpoint == 'admin.inbox_page' and unread and unread.total %}<b class="sb-count">{{ unread.total }}</b>{% endif %}
+        </a>
+      {% endfor %}
+    </nav>
+  </aside>
+  <div class="sb-backdrop" aria-hidden="true"></div>
+  {% endif %}
+
+  <div class="adm-shell">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes">
+          {% for cat, msg in messages %}
+            <div class="flash flash-{{ cat }}"><span>{{ msg }}</span><button class="flash-close" aria-label="Dismiss">{{ icon("x") }}</button></div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+    {% if g.user %}
+    <div class="adm-panel">
+      <div class="adm-toolbar">
+        <button class="sb-toggle" type="button" aria-label="Open or close the menu" aria-controls="sidebar">{{ icon("menu") }}</button>
+        <span class="crumbs"><a href="{{ url_for('admin.dashboard') }}">{{ business.name }}</a><span>/</span>{{ self.title() }}</span>
+      </div>
+      <main class="adm-main">{% block content %}{% endblock %}</main>
+    </div>
+    {% else %}
+    <main class="adm-main">{{ self.content() }}</main>
+    {% endif %}
+  </div>
+
+  {# pop-up used by every "+ Add …" button (data-modal) #}
+  <dialog class="modal" id="modal" aria-labelledby="modal-title">
+    <div class="modal-head">
+      <h2 id="modal-title"></h2>
+      <button class="tb-icon modal-x" type="button" data-modal-close aria-label="Close">{{ icon("x") }}</button>
+    </div>
+    <div class="modal-body"></div>
+  </dialog>
+
+  <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/loader.js') }}"></script>
+</body>
+</html>

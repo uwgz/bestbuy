@@ -1,0 +1,41 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<section class="error-page">
+  <div class="container">
+    {% include "partials/error_mark.svg" %}
+    <p class="error-code" aria-hidden="true">{{ code }}</p>
+    <h1>{{ title }}</h1>
+    <p class="error-msg">{{ message }}</p>
+
+    {% if show_search %}
+      <form class="error-search" action="{{ url_for('shop.shop') }}" method="get" role="search">
+        <input type="search" name="q" placeholder="Search products…" aria-label="Search products">
+        <button class="btn" type="submit">Search</button>
+      </form>
+    {% endif %}
+
+    <div class="error-actions">
+      {% if in_admin and code in (400, 403, 404, 405, 413, 415) %}
+        <a class="btn" href="{{ url_for('admin.dashboard') }}">Back to admin</a>
+      {% elif code == 429 %}
+        <a class="btn" href="{{ url_for('main.home') }}">Go to the home page</a>
+      {% else %}
+        <a class="btn" href="{{ url_for('main.home') }}">Go to the home page</a>
+        <a class="btn btn-outline" href="javascript:history.back()">Go back</a>
+      {% endif %}
+    </div>
+
+    {% if code == 404 %}
+      <nav class="error-links" aria-label="Popular pages">
+        <a href="{{ url_for('shop.shop') }}">{{ icon("shop") }} Shop devices</a>
+        <a href="{{ url_for('studio.services_page') }}">{{ icon("camera") }} Photography</a>
+        <a href="{{ url_for('studio.book') }}">{{ icon("calendar") }} Book a session</a>
+        <a href="{{ url_for('main.contact') }}">{{ icon("mail") }} Contact us</a>
+      </nav>
+    {% elif code >= 500 %}
+      <p class="error-contact">Need help now? Call <a href="tel:{{ business.phone }}">{{ business.phone }}</a> or email <a href="mailto:{{ business.email }}">{{ business.email }}</a>.</p>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

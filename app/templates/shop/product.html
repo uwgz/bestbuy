@@ -1,0 +1,50 @@
+{% extends "layouts/base.html" %}
+{% block title %}{{ product.name }}{% endblock %}
+{% block content %}
+<section class="section">
+  <div class="container">
+    <p class="breadcrumb"><a href="{{ url_for('shop.shop') }}">Shop</a> / <a href="{{ url_for('shop.shop', category=product.category) }}">{{ categories[product.category] }}</a> / {{ product.name }}</p>
+    <div class="product-detail">
+      <div class="product-media">
+        <div class="product-img large{{ ' photo' if product.photo }}" id="main-photo-wrap">
+          {% if product.image %}<img id="main-photo" src="{{ product.image }}" alt="{{ product.name }}">{% else %}<span class="ph">{{ icon(product.icon) }}</span>{% endif %}
+          {% if product.on_sale %}<em class="badge badge-sale">−{{ product.discount_percent }}%</em>{% elif product.badge %}<em class="badge">{{ product.badge }}</em>{% endif %}
+        </div>
+        {% if product.gallery|length > 1 %}
+          <div class="thumbs" id="thumbs">
+            {% for img in product.gallery %}
+              <button type="button" class="thumb{{ ' active' if loop.first }}" data-src="{{ img }}" aria-label="Photo {{ loop.index }}">
+                <img src="{{ img }}" alt="" loading="lazy">
+              </button>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+      <div>
+        <p class="product-cat">{{ categories[product.category] }}</p>
+        <h1>{{ product.name }}</h1>
+        <p class="detail-price">{% if product.on_sale %}<span class="sale">{{ product.price|money }}</span> <s class="price-was">{{ product.original_price|money }}</s>
+          <span class="save-note">Save {{ product.save_amount|money }}{% if product.discount_ends %} · ends {{ product.discount_ends }}{% endif %}</span>{% else %}{{ product.price|money }}{% endif %}</p>
+        <p class="lead">{{ product.description }}</p>
+        <form method="post" action="{{ url_for('shop.cart_add', product_id=product.id) }}" class="add-form">{{ csrf_field() }}
+          <label>Qty <input type="number" name="qty" value="1" min="1" max="99"></label>
+          {% if product.in_stock %}<button class="btn" type="submit">Add to bag</button>{% else %}<button class="btn" type="button" disabled>Sold out</button>{% endif %}
+        </form>
+        <ul class="perks">
+          <li>{{ icon("store") }} Free in-store pickup</li>
+          <li>{{ icon("shield") }} 1-year warranty + optional extended cover</li>
+          <li>{{ icon("undo") }} 30-day returns</li>
+          <li>{{ icon("wrench") }} Free setup help from our team</li>
+        </ul>
+      </div>
+    </div>
+
+    {% if related %}
+      <h2 class="mt">You might also like</h2>
+      <div class="product-grid">
+        {% for p in related %}{% include "partials/product_card.html" %}{% endfor %}
+      </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

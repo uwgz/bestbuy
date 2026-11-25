@@ -1,0 +1,43 @@
+{% extends "admin/base.html" %}
+{% block title %}Products{% endblock %}
+{% block content %}
+<div class="adm-head">
+  <div><h1>Products</h1><p class="muted">{{ items|length }} product{{ '' if items|length == 1 else 's' }}</p></div>
+  <a class="btn" href="{{ url_for('admin.product_new') }}" data-modal data-modal-title="Add a product">+ Add product</a>
+</div>
+
+<form class="adm-filter" method="get">
+  <input type="search" name="q" value="{{ q }}" placeholder="Search products…">
+  <select name="category" onchange="this.form.submit()">
+    <option value="">All categories</option>
+    {% for slug, (label, _) in cats.items() %}<option value="{{ slug }}" {{ 'selected' if cat == slug }}>{{ label }}</option>{% endfor %}
+  </select>
+</form>
+
+<div class="list">
+  {% for p in items %}
+    <div class="list-row{{ ' is-hidden' if not p.is_active }}">
+      <a class="thumb-md" href="{{ url_for('admin.product_edit', slug=p.slug) }}">{% if p.image %}<img src="{{ p.image }}" alt="">{% else %}{{ icon(p.icon) }}{% endif %}</a>
+      <a class="grow" href="{{ url_for('admin.product_edit', slug=p.slug) }}">
+        <b>{{ p.short }}</b>
+        <small>{{ p.category_label }} · {{ p.images|length }} photo{{ '' if p.images|length == 1 else 's' }}</small>
+        <span class="tags">
+          {% if not p.is_active %}<em class="tag">Hidden</em>{% endif %}
+          {% if not p.in_stock %}<em class="tag tag-warn">Sold out</em>{% endif %}
+          {% if p.on_sale %}<em class="tag tag-sale">−{{ p.discount_percent }}%</em>{% endif %}
+          {% if p.home_position %}<em class="tag">Home #{{ p.home_position }}</em>{% endif %}
+        </span>
+      </a>
+      <div class="list-price">
+        {% if p.on_sale %}<b class="sale">{{ p.price|money }}</b><s>{{ p.original_price|money }}</s>{% else %}<b>{{ p.price|money }}</b>{% endif %}
+      </div>
+      <form method="post" action="{{ url_for('admin.product_toggle', product_id=p.id) }}">{{ csrf_field() }}
+        <input type="hidden" name="back" value="{{ request.full_path }}">
+        <button class="btn btn-small btn-outline" type="submit">{{ 'Hide' if p.is_active else 'Show' }}</button>
+      </form>
+    </div>
+  {% else %}
+    <div class="empty">No products found.</div>
+  {% endfor %}
+</div>
+{% endblock %}
