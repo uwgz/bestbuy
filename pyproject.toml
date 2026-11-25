@@ -3,10 +3,10 @@ name = "vision-electronics"
 version = "1.0.0"
 description = "Vision Electronics — electronics store and photography studio website (Flask)"
 requires-python = ">=3.10"
-
-[tool.vercel]
-# Vercel runs the Flask `app` defined in wsgi.py
-entrypoint = "wsgi:app"
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
+dependencies = [
+    "Flask>=3.0,<4",
+    "Pillow>=10.0",
+    "python-dotenv>=1.0",
+    "psycopg[binary]>=3.2,<4",
+    "vercel>=0.5,<1",
+]
