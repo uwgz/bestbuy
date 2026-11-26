@@ -71,6 +71,12 @@ def _version_static_urls(app):
     file gets a new address straight away."""
     import hashlib
     cache = {}
+    # On Vercel the files in public/ are served by its CDN and may not be readable by the app;
+    # then each deployment gets its own version instead, so a new deployment still means new addresses.
+    deploy = (os.environ.get("VERCEL_DEPLOYMENT_ID") or os.environ.get("VERCEL_GIT_COMMIT_SHA") or "")[:10]
+    if not deploy:
+        import time
+        deploy = format(int(time.time()), "x")      # changes on every cold start: never older than the code
 
     @app.url_defaults
     def add_version(endpoint, values):
@@ -81,7 +87,7 @@ def _version_static_urls(app):
             try:
                 cache[name] = hashlib.md5((STATIC_DIR / name).read_bytes()).hexdigest()[:10]
             except OSError:
-                cache[name] = None
+                cache[name] = deploy
         if cache[name]:
             values["v"] = cache[name]
 

@@ -141,3 +141,15 @@ def test_reconnects_after_the_connection_drops(app, backend):
         killer.close()
         assert query("SELECT COUNT(*) AS n FROM products", one=True)["n"] == 5     # works again, new connection
         assert get_db()._conn().cursor().execute("SELECT pg_backend_pid()").fetchone()[0] != pid
+
+
+def test_static_links_are_versioned_even_when_files_are_not_readable(tmp_path, backend, request, monkeypatch):
+    """On Vercel public/ may be served by the CDN only: links still get a per-deployment ?v=."""
+    import app as app_module
+    from conftest import make_app
+    monkeypatch.setenv("VERCEL_DEPLOYMENT_ID", "dpl_abc123xyz")
+    monkeypatch.setattr(app_module, "STATIC_DIR", tmp_path / "missing")
+    a = make_app(tmp_path, backend, request)
+    with a.test_request_context():
+        from flask import url_for
+        assert url_for("static", filename="css/admin.css").endswith("?v=dpl_abc123")
