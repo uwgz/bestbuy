@@ -1,9 +1,3 @@
-"""A tiny stand-in for psycopg, used only by the tests.
-
-It speaks PostgreSQL's own network protocol to a real local PostgreSQL server (no password,
-no TLS), and offers the few psycopg features the app uses: connect(), cursor().execute()
-with %s placeholders, description, fetchall(), rowcount, closed/broken and the error classes.
-"""
 import socket
 import struct
 from decimal import Decimal

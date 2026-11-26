@@ -4,7 +4,6 @@ from pathlib import Path
 from conftest import PASSWORD, photo_bytes
 
 
-# ---------- access ----------
 def test_admin_requires_login(client, owner):
     owner.post("/altar/logout")
     r = client.get("/altar/products")

@@ -1,5 +1,3 @@
-"""Stand-in for Vercel Blob (photo storage), so the Vercel setup can be tested offline:
-records put_blob / delete_blob calls like the Vercel Blob SDK."""
 from types import SimpleNamespace
 
 

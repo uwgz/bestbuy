@@ -1,15 +1,3 @@
-"""
-Build every logo file — and the logo animation — from one drawing.
-
-    python tools/brand.py      # writes public/static/img/brand/*, favicon.svg, apple-touch-icon.png,
-                               # public/favicon.ico and the animated logos in app/templates/partials/
-
-The mark: a shopping bag with a camera lens on it (the shop and the studio in one picture).
-The lens is a hole cut through the bag, so the page shows through it; in its centre sits the
-lens glass and a small red dot that blinks in the animation, like a camera's recording light.
-
-SVG files need only Python; the PNG files are rendered with Playwright + Chrome (dev machines only).
-"""
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -21,8 +9,8 @@ RED = "#ff3b30"
 NAME = "Best Buy 250"
 BLINK_SECONDS = 2.4
 
-# ------------------------------------------------------------------ the drawing (64 × 64 grid)
-# a circle as two arcs, so it can be cut out of the bag with the even-odd rule
+
+
 def _circle(cx, cy, r):
     return f"M{cx - r} {cy}a{r} {r} 0 1 0 {2 * r} 0a{r} {r} 0 1 0 {-2 * r} 0Z"
 

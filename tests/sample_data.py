@@ -1,7 +1,3 @@
-"""Sample shop content for the tests only — the real website starts empty.
-
-Images are drawn on the fly (plain coloured squares), so no photos are stored in the project.
-"""
 import io
 
 from PIL import Image
