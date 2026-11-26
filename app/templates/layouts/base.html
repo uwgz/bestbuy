@@ -32,7 +32,7 @@
   <header class="site-header">
     <nav class="nav container-wide" aria-label="Main">
       <a class="logo" href="{{ url_for('main.home') }}" aria-label="{{ business.name }} — home">
-        {% include "partials/logo_anim.svg" %}
+        {% include "partials/logo_anim.svg" %}<span class="logo-text">{{ business.name }}</span>
       </a>
       <div class="nav-tabs{{ ' has-active' if in_devices or in_photo }}">
         <a href="{{ url_for('shop.shop') }}" class="{{ 'active' if in_devices }}"{{ ' aria-current="page"' if in_devices }}>Devices</a>

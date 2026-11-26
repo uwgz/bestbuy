@@ -1,4 +1,4 @@
-// Vision Electronics admin — sidebar, theme, pop-ups and form helpers
+// Best Buy 250 admin — sidebar, theme, pop-ups and form helpers
 (() => {
   const root = document.documentElement;
   const save = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };

@@ -1,6 +1,6 @@
-# Vision Electronics
+# Best Buy 250
 
-Website for Vision Electronics — an electronics shop with a photography studio.
+Website for Best Buy 250 — an electronics shop with a photography studio.
 Built with Flask (Python). The site starts **empty**: you add everything from the admin panel.
 
 ---
@@ -13,7 +13,7 @@ You need free accounts on **GitHub**, **Vercel** and **Neon** (Neon keeps your d
 Create an empty repository on github.com, then in this folder:
 
 ```bash
-git remote add origin https://github.com/YOUR-NAME/vision-electronics.git
+git remote add origin https://github.com/YOUR-NAME/best-buy-250.git
 git push -u origin main
 ```
 

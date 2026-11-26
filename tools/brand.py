@@ -1,17 +1,15 @@
 """
 Build every logo file — and the logo animation — from one drawing.
 
-    python tools/brand.py      # writes public/static/img/brand/*, favicon.svg, apple-touch-icon.png
-                               # and the animated logos in app/templates/partials/
+    python tools/brand.py      # writes public/static/img/brand/*, favicon.svg, apple-touch-icon.png,
+                               # public/favicon.ico and the animated logos in app/templates/partials/
 
-The mark is the Vision Electronics emblem (a licensed design; keep the original purchase file and
-licence outside this repository). tools/emblem.json holds it as vector outlines: the body (the
-rounded E) and the two small lines on the right, which light up red one after the other in the
-animation — like a signal.
+The mark: a shopping bag with a camera lens on it (the shop and the studio in one picture).
+The lens is a hole cut through the bag, so the page shows through it; in its centre sits the
+lens glass and a small red dot that blinks in the animation, like a camera's recording light.
 
 SVG files need only Python; the PNG files are rendered with Playwright + Chrome (dev machines only).
 """
-import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -19,18 +17,28 @@ STATIC = ROOT / "public" / "static"
 BRAND = STATIC / "img" / "brand"
 PARTIALS = ROOT / "app" / "templates" / "partials"
 
-E = json.loads((Path(__file__).with_name("emblem.json")).read_text())
-W, H = E["width"], E["height"]
 RED = "#ff3b30"
+NAME = "Best Buy 250"
+BLINK_SECONDS = 2.4
 
-TIGHT = f"0 0 {W} {H}"                                # just the emblem
-SIDE = round(max(W, H) * 1.12, 2)                    # a little space around the emblem
-VIEW = f"{(W - SIDE) / 2:.2f} {(H - SIDE) / 2:.2f} {SIDE} {SIDE}"   # square box around it
-SIGNAL_SECONDS = 2.4                                  # one cycle of the red signal
+# ------------------------------------------------------------------ the drawing (64 × 64 grid)
+# a circle as two arcs, so it can be cut out of the bag with the even-odd rule
+def _circle(cx, cy, r):
+    return f"M{cx - r} {cy}a{r} {r} 0 1 0 {2 * r} 0a{r} {r} 0 1 0 {-2 * r} 0Z"
+
+HANDLE = "M24 21v-3a8 8 0 0 1 16 0v3"                        # drawn as a 3.6-wide rounded line
+BAG = "M9 21h46l-3.1 33.3A4 4 0 0 1 47.9 58H16.1a4 4 0 0 1-4-3.7Z" + _circle(32, 40, 11)
+GLASS = _circle(32, 40, 6.2)
+DOT = (32, 40, 2.7)
+
+TIGHT = "8.5 7.5 47 51"                                 # just the mark
+VIEW = "1 2 62 62"                                            # square, a little space around it
 
 
-def mark(color="#000"):
-    return f'<path d="{E["body"]}{E["line1"]}{E["line2"]}" fill="{color}"/>'
+def mark(color="#000", dot=RED):
+    return (f'<path d="{HANDLE}" fill="none" stroke="{color}" stroke-width="3.6" stroke-linecap="round"/>'
+            f'<path d="{BAG}{GLASS}" fill="{color}" fill-rule="evenodd"/>'
+            f'<circle cx="{DOT[0]}" cy="{DOT[1]}" r="{DOT[2]}" fill="{dot}"/>')
 
 
 def svg(inner, view=VIEW, extra=""):
@@ -38,24 +46,22 @@ def svg(inner, view=VIEW, extra=""):
 
 
 def round_icon(bg="#000", fg="#fff", style=""):
-    """The emblem in a circle (app icon, favicon)."""
-    scale = 58 / SIDE
+    """The mark in a circle (app icon, favicon)."""
     inner = (f'<circle cx="50" cy="50" r="50" fill="{bg}" class="bg"/>\n'
-             f'<g transform="translate(50 50) scale({scale:.5f}) translate({-W / 2:.2f} {-H / 2:.2f})" class="fg">{mark(fg)}</g>')
+             f'<g transform="translate(50 52) scale(1.02) translate(-32 -32)" class="fg">{mark(fg)}</g>')
     return svg(style + inner, view="0 0 100 100")
 
 
 def animated(cls, view=TIGHT, label=""):
-    """The emblem; its two small lines light up red one after the other, then fade back — a signal.
-    Colour follows the page (currentColor). People who turn off motion see the still emblem."""
-    def line(d, start):
-        # fade to red, hold, fade back; the second line follows the first
-        k = ";".join(f"{v:g}" for v in (0, start, round(start + .12, 2), round(start + .34, 2), round(start + .46, 2), 1))
-        return (f'<path d="{d}" fill="currentColor"><animate attributeName="fill" dur="{SIGNAL_SECONDS}s" '
-                f'repeatCount="indefinite" keyTimes="{k}" values="currentColor;currentColor;{RED};{RED};currentColor;currentColor"/></path>')
+    """The mark in the page's text colour (currentColor); the red dot in the lens blinks like a
+    camera's recording light. People who turn off motion see the still mark."""
     aria = f' role="img" aria-label="{label}"' if label else ' aria-hidden="true"'
+    blink = (f'<animate attributeName="opacity" dur="{BLINK_SECONDS}s" repeatCount="indefinite" '
+             f'keyTimes="0;.45;.55;.9;1" values="1;1;.15;.15;1"/>')
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="{view}" class="{cls}"{aria}>\n'
-            f'<path d="{E["body"]}" fill="currentColor"/>\n{line(E["line1"], .08)}\n{line(E["line2"], .26)}\n</svg>\n')
+            f'<path d="{HANDLE}" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/>\n'
+            f'<path d="{BAG}{GLASS}" fill="currentColor" fill-rule="evenodd"/>\n'
+            f'<circle cx="{DOT[0]}" cy="{DOT[1]}" r="{DOT[2]}" fill="{RED}" class="rec-dot">{blink}</circle>\n</svg>\n')
 
 
 # ------------------------------------------------------------------ writing files
@@ -64,10 +70,11 @@ def write_svgs():
     (BRAND / "logo-mark.svg").write_text(svg(mark("#000")))
     (BRAND / "logo-mark-white.svg").write_text(svg(mark("#fff")))
     (BRAND / "app-icon.svg").write_text(round_icon())
-    style = "<style>.bg{fill:#000}.fg path{fill:#fff}@media (prefers-color-scheme:dark){.bg{fill:#fff}.fg path{fill:#000}}</style>\n"
+    style = ("<style>.bg{fill:#000}.fg path{fill:#fff;stroke:#fff}.fg path[fill=none]{fill:none}"
+             "@media (prefers-color-scheme:dark){.bg{fill:#fff}.fg path{fill:#000;stroke:#000}.fg path[fill=none]{fill:none}}</style>\n")
     (STATIC / "favicon.svg").write_text(round_icon(style=style))
     (PARTIALS / "loader_mark.svg").write_text(animated("loader-mark", VIEW))
-    (PARTIALS / "logo_anim.svg").write_text(animated("logo-mark", TIGHT, "Vision Electronics"))
+    (PARTIALS / "logo_anim.svg").write_text(animated("logo-mark", TIGHT, NAME))
     (PARTIALS / "error_mark.svg").write_text(animated("error-mark", TIGHT))
 
 
@@ -82,9 +89,9 @@ def write_pngs():
         return svg_text.replace("<svg ", f'<svg width="{w}" height="{h or w}" ', 1)
 
     def lockup(fg, bg):
-        return page(f'''<div style="height:350px;display:flex;align-items:center;justify-content:center;gap:56px;color:{fg}">
-{sized(svg(mark(fg), TIGHT), 232, 205)}
-<div style="font:500 128px {font};letter-spacing:-.025em">Vision Electronics</div></div>''', 1556, 350, bg)
+        return page(f'''<div style="height:350px;display:flex;align-items:center;justify-content:center;gap:48px;color:{fg}">
+{sized(svg(mark(fg), TIGHT), 230, 250)}
+<div style="font:600 128px {font};letter-spacing:-.03em">{NAME}</div></div>''', 1556, 350, bg)
 
     def centered(svg_text, size, bg="transparent", inner=None):
         return page(f'<div style="width:{size}px;height:{size}px;display:grid;place-items:center">{sized(svg_text, inner or size)}</div>',
@@ -98,7 +105,7 @@ def write_pngs():
         ("img/brand/icon-512.png", centered(round_icon(), 512), 512, 512, True),
         ("img/brand/icon-192.png", centered(round_icon(), 192), 192, 192, True),
         ("img/brand/favicon-32.png", centered(round_icon(), 32), 32, 32, True),
-        ("apple-touch-icon.png", centered(svg(mark("#fff")), 180, "#000", 112), 180, 180, False),
+        ("apple-touch-icon.png", centered(svg(mark("#fff")), 180, "#000", 116), 180, 180, False),
     ]
     with sync_playwright() as p:
         browser = p.chromium.launch(executable_path="/usr/bin/google-chrome")
@@ -108,6 +115,9 @@ def write_pngs():
             pg.screenshot(path=str(STATIC / name), omit_background=transparent)
             pg.close()
         browser.close()
+
+    from PIL import Image
+    Image.open(BRAND / "icon-512.png").save(ROOT / "public" / "favicon.ico", sizes=[(16, 16), (32, 32), (48, 48)])
 
 
 if __name__ == "__main__":

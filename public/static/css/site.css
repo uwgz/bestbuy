@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Vision Electronics — stylesheet
+   Best Buy 250 — stylesheet
    Clean, product-first design: system sans type, quiet greys, blue pill
    buttons, borderless tiles. Mobile-first; follows the device light/dark mode.
    ========================================================================== */
@@ -116,7 +116,7 @@ img { max-width: 100%; display: block; }
 .nav { display: flex; align-items: center; height: 100%; gap: 8px; }
 .logo { display: flex; align-items: center; gap: 7px; color: var(--text); font: 600 17px var(--font-display); letter-spacing: -.02em; margin-right: auto; }
 .logo:hover { text-decoration: none; }
-.logo-mark { width: 36px; height: 32px; color: var(--text); }
+.logo-mark { width: 31px; height: 34px; color: var(--text); }
 .nav-actions { display: flex; align-items: center; gap: 2px; }
 .nav-icon {
   position: relative; width: 44px; height: 44px; display: grid; place-items: center;
@@ -661,8 +661,9 @@ th { color: var(--muted); font-weight: 600; }
 .svc-jump { margin: 20px auto 0; padding: 2px 22px 4px; }
 
 /* Logo: drawn in the text colour, so it is black in day mode and white in night mode */
-.logo { gap: 6px; }
-.logo-text { display: none !important; }
+.logo { gap: 9px; }
+.logo-text { display: none; font: 600 17px var(--font-display); letter-spacing: -.02em; white-space: nowrap; }
+@media (min-width: 834px) { .logo-text { display: inline; } }   /* the name beside the bag on wider screens */
 
 /* ---------- Sale prices, sold out, misc (v2) ---------- */
 .sale, .price-now.sale { color: #d70015; }
@@ -688,6 +689,7 @@ th { color: var(--muted); font-weight: 600; }
 
 /* ---------- Shop by category: centred ---------- */
 .section-center .section-title { text-align: center; }
+.cat-row { padding-left: 22px; padding-right: 22px; }   /* nine departments: use the full width */
 .cat-row > :first-child { margin-left: auto; }   /* centres the row when it fits, still scrolls when it doesn't */
 .cat-row > :last-child { margin-right: auto; }
 

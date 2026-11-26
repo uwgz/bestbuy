@@ -1,5 +1,5 @@
 """
-Vision Electronics — electronics store and photography studio.
+Best Buy 250 — electronics store and photography studio.
 
 Application factory: `create_app()` builds and configures the Flask app.
 """

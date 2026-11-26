@@ -229,7 +229,7 @@ def test_recent_work_shows_only_portfolio(owner):
 def test_currency_change_applies_everywhere(owner):
     s = owner.get("/altar/settings").data
     assert b'value="RWF"' in s and b"Rwandan Franc" in s
-    owner.post("/altar/settings", data={"currency": "RWF", "name": "Vision Electronics"})
+    owner.post("/altar/settings", data={"currency": "RWF", "name": "Best Buy 250"})
     home = owner.get("/").data.decode()
     assert "RWF " in home and "Prices in Rwandan Franc (RWF)" in home
     shop = owner.get("/shop").data.decode()

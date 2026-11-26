@@ -112,7 +112,7 @@ def test_stop_ends_it_and_store_details_cannot_restart_it(app, owner):
     assert 'data-giveaway' not in _visitor(app).get("/").get_data(as_text=True)
     assert _visitor(app).post("/giveaway/check").get_json()["won"] is False
     # the hidden end time can't be set through the Store details form
-    owner.post("/altar/settings", data={"name": "Vision Electronics", "giveaway_until": "2999-01-01T00:00:00Z"})
+    owner.post("/altar/settings", data={"name": "Best Buy 250", "giveaway_until": "2999-01-01T00:00:00Z"})
     assert 'data-giveaway' not in _visitor(app).get("/").get_data(as_text=True)
 
 

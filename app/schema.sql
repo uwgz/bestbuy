@@ -1,4 +1,4 @@
--- Vision Electronics database schema (SQLite)
+-- Best Buy 250 database schema (SQLite)
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS users (

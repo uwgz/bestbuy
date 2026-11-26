@@ -1,4 +1,4 @@
-// Vision Electronics — small progressive enhancements (the site works without JS)
+// Best Buy 250 — small progressive enhancements (the site works without JS)
 document.addEventListener("DOMContentLoaded", () => {
   // ---------- Phone menu ----------
   const toggle = document.querySelector(".nav-toggle");

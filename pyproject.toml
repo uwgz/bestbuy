@@ -1,7 +1,7 @@
 [project]
-name = "vision-electronics"
+name = "best-buy-250"
 version = "1.0.0"
-description = "Vision Electronics — electronics store and photography studio website (Flask)"
+description = "Best Buy 250 — electronics store and photography studio website (Flask)"
 requires-python = ">=3.10"
 dependencies = [
     "Flask>=3.0,<4",
@@ -10,3 +10,10 @@ dependencies = [
     "psycopg[binary]>=3.2,<4",
     "vercel>=0.5,<1",
 ]
+
+[tool.vercel]
+# Vercel runs the Flask `app` defined in wsgi.py
+entrypoint = "wsgi:app"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

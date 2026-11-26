@@ -6,12 +6,15 @@ from ..db import execute, get_db, now_text, query
 from .. import images
 
 # slug -> (label, icon)
-CATEGORIES = {
+CATEGORIES = {                     # key (stored on each product): (label, icon)
+    "phones": ("Phones & Tablets", "smartphone"),
+    "computers": ("Laptops & Computers", "laptop"),
+    "tv": ("TV & Home Theater", "tv"),
+    "audio": ("Audio", "headphones"),
     "cameras": ("Cameras", "camera"),
     "lenses": ("Lenses", "aperture"),
-    "audio": ("Audio", "headphones"),
-    "computers": ("Computers", "laptop"),
-    "phones": ("Phones & Tablets", "smartphone"),
+    "gaming": ("Gaming", "gamepad"),
+    "wearables": ("Smartwatches", "watch"),
     "accessories": ("Accessories", "plug"),
 }
 

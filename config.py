@@ -33,7 +33,7 @@ def _blob_configured():
 class Config:
     # Leave SECRET_KEY empty in development: one is generated and kept in instance/secret_key.
     SECRET_KEY = os.environ.get("SECRET_KEY", "")
-    INSTANCE_DIR = Path(os.environ.get("INSTANCE_DIR") or ("/tmp/vision-electronics" if ON_VERCEL else BASE_DIR / "instance"))
+    INSTANCE_DIR = Path(os.environ.get("INSTANCE_DIR") or ("/tmp/best-buy-250" if ON_VERCEL else BASE_DIR / "instance"))
     DATABASE = INSTANCE_DIR / "vision.db"
     UPLOAD_DIR = INSTANCE_DIR / "uploads"          # photos added from the admin panel (local storage)
 

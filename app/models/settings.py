@@ -7,7 +7,7 @@ from .. import currency as currencies
 from ..db import get_db, query
 
 DEFAULTS = {
-    "name": "Vision Electronics",
+    "name": "Best Buy 250",
     "tagline": "See more. Capture everything.",
     "phone": "",
     "email": "",
