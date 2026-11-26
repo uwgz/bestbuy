@@ -119,7 +119,8 @@ def _hosting_warnings():
     if not using_postgres():
         out.append("The database isn't connected (DATABASE_URL from Neon), so changes are lost when Vercel restarts the site.")
     if current_app.config.get("MEDIA_STORAGE") != "blob":
-        out.append("Photo storage isn't connected (Vercel Blob), so uploaded photos are lost when Vercel restarts the site.")
+        out.append("Photo storage isn't connected (Vercel Blob), so uploaded photos are lost when Vercel restarts the site. "
+                   "This deployment doesn't see BLOB_STORE_ID: connect a Blob store to this project, then redeploy.")
     return out
 
 

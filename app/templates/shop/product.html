@@ -1,14 +1,14 @@
 {% extends "layouts/base.html" %}
 {% block title %}{{ product.name }}{% endblock %}
 {% block content %}
-<section class="section">
+<section class="section pd-section">
   <div class="container">
     <p class="breadcrumb"><a href="{{ url_for('shop.shop') }}">Shop</a> / <a href="{{ url_for('shop.shop', category=product.category) }}">{{ categories[product.category] }}</a> / {{ product.name }}</p>
     <div class="product-detail">
       <div class="product-media">
         <div class="product-img large{{ ' photo' if product.photo }}" id="main-photo-wrap">
           {% if product.image %}<img id="main-photo" src="{{ product.image }}" alt="{{ product.name }}">{% else %}<span class="ph">{{ icon(product.icon) }}</span>{% endif %}
-          {% if product.on_sale %}<em class="badge badge-sale">−{{ product.discount_percent }}%</em>{% elif product.badge %}<em class="badge">{{ product.badge }}</em>{% endif %}
+          {% if product.on_sale %}<em class="badge badge-sale">−{{ product.discount_percent }}%</em>{% endif %}
         </div>
         {% if product.gallery|length > 1 %}
           <div class="thumbs" id="thumbs">
@@ -19,23 +19,62 @@
             {% endfor %}
           </div>
         {% endif %}
+        {# share · photo dots · like #}
+        <div class="pd-actions">
+          <button type="button" class="pd-icon-btn" id="pd-share" data-title="{{ product.name }}" aria-label="Share">{{ icon("share") }}</button>
+          <div class="pd-dots" aria-hidden="true">
+            {% if product.gallery|length > 1 %}{% for img in product.gallery %}<span class="pd-dot{{ ' active' if loop.first }}"></span>{% endfor %}{% endif %}
+          </div>
+          <button type="button" class="pd-icon-btn pd-like" id="pd-like" data-id="{{ product.id }}" aria-pressed="false" aria-label="Like">{{ icon("heart") }}</button>
+        </div>
       </div>
-      <div>
-        <p class="product-cat">{{ categories[product.category] }}</p>
-        <h1>{{ product.name }}</h1>
-        <p class="detail-price">{% if product.on_sale %}<span class="sale">{{ product.price|money }}</span> <s class="price-was">{{ product.original_price|money }}</s>
-          <span class="save-note">Save {{ product.save_amount|money }}{% if product.discount_ends %} · ends {{ product.discount_ends }}{% endif %}</span>{% else %}{{ product.price|money }}{% endif %}</p>
-        <p class="lead">{{ product.description }}</p>
+
+      <div class="pd-info">
+        <h1 class="pd-title">{{ product.name }}</h1>
+
+        {% if product.badge %}<p class="pd-pill">{{ product.badge }}</p>{% endif %}
+        <div class="pd-price">
+          {% if product.on_sale %}
+            <p class="pd-save">Save {{ product.save_amount|money }}</p>
+            <p class="pd-now sale">{{ product.price|money }}</p>
+            <p class="pd-was">Was <s>{{ product.original_price|money }}</s></p>
+          {% else %}
+            <p class="pd-now">{{ product.price|money }}</p>
+          {% endif %}
+        </div>
+        {% if product.on_sale and product.discount_ends %}
+          <p class="pd-ends">Sale ends: <span>{{ product.discount_ends|long_date }}</span></p>
+        {% endif %}
+
+        {# how to get it #}
+        <div class="pd-ways">
+          {% if whatsapp_product %}
+          <a class="pd-way" href="{{ whatsapp_product }}" target="_blank" rel="noopener">
+            {{ icon("whatsapp") }}<strong>WhatsApp</strong><span>Ask or order in a chat</span>
+          </a>
+          {% endif %}
+          <a class="pd-way" href="{{ url_for('main.contact') }}">
+            {{ icon("store") }}<strong>Pick up</strong><span>Collect it at our shop</span>
+          </a>
+        </div>
+
         <form method="post" action="{{ url_for('shop.cart_add', product_id=product.id) }}" class="add-form">{{ csrf_field() }}
           <label>Qty <input type="number" name="qty" value="1" min="1" max="99"></label>
-          {% if product.in_stock %}<button class="btn" type="submit">Add to bag</button>{% else %}<button class="btn" type="button" disabled>Sold out</button>{% endif %}
+          {% if product.in_stock %}<button class="btn" type="submit">Add to cart</button>{% else %}<button class="btn" type="button" disabled>Sold out</button>{% endif %}
         </form>
-        <ul class="perks">
-          <li>{{ icon("store") }} Free in-store pickup</li>
-          <li>{{ icon("shield") }} 1-year warranty + optional extended cover</li>
-          <li>{{ icon("undo") }} 30-day returns</li>
-          <li>{{ icon("wrench") }} Free setup help from our team</li>
-        </ul>
+        <p class="pd-warranty">{{ icon("shield") }} 1-year warranty</p>
+
+        {% if product.description %}
+        <div class="pd-about">
+          <h2>About this product</h2>
+          <div class="pd-box">
+            <h3>Overview</h3>
+            {% for kind, body in product.description|overview %}
+              {% if kind == "p" %}<p>{{ body }}</p>{% else %}<ul>{% for b in body %}<li>{{ b }}</li>{% endfor %}</ul>{% endif %}
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
       </div>
     </div>
 
@@ -47,4 +86,5 @@
     {% endif %}
   </div>
 </section>
+<div class="pd-toast" id="pd-toast" role="status" aria-live="polite"></div>
 {% endblock %}

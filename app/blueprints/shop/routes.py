@@ -34,7 +34,10 @@ def shop():
 @bp.route("/product/<slug>")
 def product(slug):
     item = products.get_by_slug(slug) or abort(404)
-    return render_template("shop/product.html", product=item, related=products.related(item))
+    store = settings.business()["name"]
+    ask = settings.whatsapp_link(f"Hello {store}! I'm interested in {item['name']} ({money(item['price'])}).\n"
+                                 + url_for("shop.product", slug=slug, _external=True))
+    return render_template("shop/product.html", product=item, related=products.related(item), whatsapp_product=ask)
 
 
 def _safe_back(default):

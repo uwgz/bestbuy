@@ -6,7 +6,7 @@ import pytest
 from app.models import giveaways
 
 
-DEVICE = "Noise-Cancelling Headphones"    # a starter product sold in the shop
+DEVICE = "Noise-Cancelling Headphones"     # a starter product sold in the shop
 
 
 def _device_id(owner):

@@ -176,3 +176,25 @@ def test_new_site_starts_empty(tmp_path):
     assert "Send message" in contact and "Send via WhatsApp" not in contact
     assert c.get("/photography").status_code == 200
     assert c.get("/altar/login").headers["Location"].endswith("/altar/setup")      # first visit: create the owner
+
+
+def test_product_page_layout(app, client):
+    from app.db import execute
+    from app.models import settings
+    with app.app_context():
+        settings.save({"whatsapp_orders": "250 788 000 000"})
+        execute("INSERT INTO products (slug, name, category, description, price_cents, discount_percent, discount_ends) "
+                "VALUES ('flip-14', 'Flip 14', 'computers', ?, 100000, 10, '2099-11-29')",
+                ("A light 2-in-1 laptop.\n- 16GB RAM\n- 512GB SSD",))
+    html = client.get("/product/flip-14").get_data(as_text=True)
+    assert 'id="pd-share"' in html and 'id="pd-like"' in html
+    assert "Sale ends: <span>November 29, 2099</span>" in html
+    assert "https://wa.me/250788000000?text=" in html and "Pick up" in html
+    assert "Add to cart" in html and "1-year warranty" in html and "extended" not in html
+    assert "<p>A light 2-in-1 laptop.</p>" in html and "<li>16GB RAM</li><li>512GB SSD</li>" in html
+
+
+def test_overview_splits_paragraphs_and_bullets():
+    from app.helpers import overview, long_date
+    assert overview("One\ntwo\n\n• a\n* b\nThree") == [("p", "One two"), ("ul", ["a", "b"]), ("p", "Three")]
+    assert overview("") == [] and long_date("") == "" and long_date("2026-01-05") == "January 5, 2026"

@@ -1,3 +1,6 @@
+"""The Vercel setup: Neon (PostgreSQL) database + Blob photos.
+
+Runs on SQLite and on a real PostgreSQL server (see conftest.py); Blob is an offline stand-in."""
 import pytest
 
 from conftest import PASSWORD, make_app, photo_bytes
@@ -19,7 +22,7 @@ def cloud(tmp_path, backend, request):
 def test_pages_and_blob_photos(cloud):
     app, backend, blob = cloud
     if backend == "postgres":
-        assert not app.config["DATABASE"].exists() 
+        assert not app.config["DATABASE"].exists()          # nothing written to a local database file
     client = app.test_client()
     assert client.get("/").status_code == 200
     html = client.get("/shop").get_data(as_text=True)

@@ -60,6 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // ---------- Product page gallery ----------
   const main = document.getElementById("main-photo");
   const thumbs = [...document.querySelectorAll("#thumbs .thumb")];
+  const dotsPd = [...document.querySelectorAll(".pd-dot")];
   if (main && thumbs.length > 1) {
     let t = 0;
     const showPhoto = n => {
@@ -67,6 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
       main.style.opacity = 0;
       setTimeout(() => { main.src = thumbs[t].dataset.src; main.style.opacity = 1; }, 150);
       thumbs.forEach((el, k) => el.classList.toggle("active", k === t));
+      dotsPd.forEach((el, k) => el.classList.toggle("active", k === t));
     };
     thumbs.forEach((el, k) => el.addEventListener("click", () => showPhoto(k)));
     let x0 = null;
@@ -77,6 +79,44 @@ document.addEventListener("DOMContentLoaded", () => {
       const dx = e.changedTouches[0].clientX - x0;
       if (Math.abs(dx) > 40) showPhoto(t + (dx < 0 ? 1 : -1));
       x0 = null;
+    });
+  }
+
+  // ---------- Product page: share and like ----------
+  const toastEl = document.getElementById("pd-toast");
+  const toast = msg => {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastEl._t);
+    toastEl._t = setTimeout(() => toastEl.classList.remove("show"), 1800);
+  };
+  const shareBtn = document.getElementById("pd-share");
+  if (shareBtn) {
+    shareBtn.addEventListener("click", async () => {
+      const data = { title: shareBtn.dataset.title, url: location.href.split("#")[0] };
+      if (navigator.share) {
+        try { await navigator.share(data); } catch (e) { /* closed the share sheet */ }
+        return;
+      }
+      try { await navigator.clipboard.writeText(data.url); toast("Link copied"); }
+      catch (e) { toast("Copy the link from the address bar"); }
+    });
+  }
+  const likeBtn = document.getElementById("pd-like");
+  if (likeBtn) {
+    // liked products are remembered on this phone or computer only
+    const read = () => { try { return JSON.parse(localStorage.getItem("liked") || "[]"); } catch (e) { return []; } };
+    const id = Number(likeBtn.dataset.id);
+    const paint = on => likeBtn.setAttribute("aria-pressed", on ? "true" : "false");
+    paint(read().includes(id));
+    likeBtn.addEventListener("click", () => {
+      let list = read();
+      const on = !list.includes(id);
+      list = on ? [...list, id] : list.filter(x => x !== id);
+      try { localStorage.setItem("liked", JSON.stringify(list)); } catch (e) { /* private mode */ }
+      paint(on);
+      toast(on ? "Added to your likes" : "Removed from your likes");
     });
   }
 

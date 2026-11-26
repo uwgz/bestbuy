@@ -1,18 +1,23 @@
+# data created while the site runs (database, uploaded photos, secret key)
 instance/*
 !instance/.gitkeep
 
+# secrets
 .env
 .env.local
 .env.*.local
 
+# Vercel CLI
 .vercel/
 
+# Python
 __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
 venv/
 
+# OS / editors
 .DS_Store
 Thumbs.db
 .idea/

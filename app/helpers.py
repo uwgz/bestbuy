@@ -17,8 +17,48 @@ def money(value):
     return currency.format_amount(value or 0, code)
 
 
+def overview(text):
+    """Split a product description into paragraphs and bullet points.
+    Lines starting with "-", "*" or "•" become bullets; blank lines separate paragraphs."""
+    blocks, para, bullets = [], [], []
+
+    def flush():
+        if para:
+            blocks.append(("p", " ".join(para)))
+            para.clear()
+        if bullets:
+            blocks.append(("ul", list(bullets)))
+            bullets.clear()
+
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if line[:1] in ("-", "*", "•"):
+            if para:
+                flush()
+            bullets.append(line[1:].strip())
+        elif line:
+            if bullets:
+                flush()
+            para.append(line)
+        else:
+            flush()
+    flush()
+    return blocks
+
+
+def long_date(iso):
+    """'2026-11-29' -> 'November 29, 2026' (empty when there is no date)."""
+    try:
+        d = datetime.strptime(iso or "", "%Y-%m-%d")
+    except ValueError:
+        return ""
+    return f"{d:%B} {d.day}, {d.year}"
+
+
 def init_app(app):
     app.jinja_env.filters["money"] = money
+    app.jinja_env.filters["overview"] = overview
+    app.jinja_env.filters["long_date"] = long_date
 
     @app.context_processor
     def inject():
