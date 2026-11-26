@@ -26,12 +26,31 @@ CREATE TABLE IF NOT EXISTS products (
     studio_gear      INTEGER NOT NULL DEFAULT 0,      -- shown on the Photography page
     gear_role        TEXT NOT NULL DEFAULT '',        -- e.g. "Main camera"
     home_position    INTEGER NOT NULL DEFAULT 0,      -- 0 = not on home page, 1 = first ...
-    in_stock         INTEGER NOT NULL DEFAULT 1,
+    in_stock         INTEGER NOT NULL DEFAULT 1,      -- kept in step with stock_qty (0 units = Sold out)
+    stock_qty        INTEGER NOT NULL DEFAULT 0,      -- units on hand; recorded sales take units off
     is_active        INTEGER NOT NULL DEFAULT 1,      -- hidden from the shop when 0
     position         INTEGER NOT NULL DEFAULT 0,
     created_at       TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at       TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Sales the owner records in the admin (orders are paid on WhatsApp or in the shop, so the site
+-- only knows a sale once it is recorded). Name and category are copied so history survives
+-- a product being deleted.
+CREATE TABLE IF NOT EXISTS sales (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id   INTEGER REFERENCES products(id) ON DELETE SET NULL,
+    product_name TEXT NOT NULL,
+    category     TEXT NOT NULL DEFAULT '',
+    qty          INTEGER NOT NULL CHECK (qty > 0),
+    unit_cents   INTEGER NOT NULL CHECK (unit_cents >= 0),
+    total_cents  INTEGER NOT NULL CHECK (total_cents >= 0),
+    sold_on      TEXT NOT NULL,                   -- YYYY-MM-DD
+    note         TEXT NOT NULL DEFAULT '',
+    created_by   INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_sales_sold_on ON sales (sold_on);
 
 CREATE TABLE IF NOT EXISTS product_images (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,

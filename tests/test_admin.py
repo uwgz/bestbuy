@@ -59,7 +59,7 @@ def _slug(response):
 
 def _new_product(client, **extra):
     data = {"name": "Test Camera", "category": "cameras", "price": "1,000.00", "discount_percent": "0",
-            "is_active": "1", "in_stock": "1", "description": "A camera", **extra}
+            "is_active": "1", "stock_qty": "3", "description": "A camera", **extra}
     return client.post("/altar/products/new", data=data, content_type="multipart/form-data")
 
 

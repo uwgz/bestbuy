@@ -5,12 +5,14 @@ Admin panel at /altar — sign in, then manage the shop and studio.
     /altar/setup        create the first owner account (only while no account exists)
     /altar/             dashboard
 """
+from datetime import date
+
 from flask import abort, current_app, flash, g, redirect, render_template, request, url_for
 
 from . import bp
-from .forms import FormError, product_from_form, service_from_form
+from .forms import FormError, product_from_form, sale_from_form, service_from_form
 from ... import currency, images
-from ...models import gear, giveaways, inbox, portfolio, products, services, settings, users
+from ...models import gear, giveaways, inbox, portfolio, products, sales, services, settings, users
 from ...security import (clear_failures, login_required, login_user, logout_user,
                          record_failure, too_many_attempts)
 
@@ -103,10 +105,43 @@ def logout():
 @login_required
 def dashboard():
     return render_template("admin/dashboard.html", counts=products.counts(), hosting_warnings=_hosting_warnings(),
+                           money=sales.summary(), recent_sales=sales.recent(6),
                            on_sale=products.list_products(active_only=False, on_sale=True),
                            recent_bookings=inbox.bookings()[:5], recent_messages=inbox.messages()[:5],
                            services_count=len(services.list_services(active_only=False)),
                            portfolio_count=len(portfolio.list_items()))
+
+
+def _sale_products():
+    """Products for the 'Record a sale' pop-up: in stock first, then by name."""
+    items = products.list_products(active_only=False)
+    return sorted(items, key=lambda p: (p["stock_qty"] <= 0, p["short"].lower()))
+
+
+# ======================================================================
+#  Sales
+# ======================================================================
+@bp.route("/sales", methods=["GET", "POST"])
+@login_required
+def sales_page():
+    if request.method == "POST":
+        try:
+            data = sale_from_form(request.form)
+            sales.record(user_id=g.user["id"], **data)
+            flash("Sale recorded.", "success")
+        except (FormError, ValueError) as e:
+            flash(str(e), "error")
+        return redirect(_back(url_for("admin.sales_page")))
+    return render_template("admin/sales.html", items=sales.recent(), money=sales.summary(),
+                           sale_products=_sale_products(), today=date.today().isoformat())
+
+
+@bp.route("/sales/<int:sale_id>/delete", methods=["POST"])
+@login_required
+def sale_delete(sale_id):
+    if sales.delete(sale_id):
+        flash("Sale removed and its units put back in stock.", "success")
+    return redirect(_back(url_for("admin.sales_page")))
 
 
 def _hosting_warnings():
@@ -133,7 +168,8 @@ def products_list():
     q = request.args.get("q", "").strip()
     cat = request.args.get("category") or None
     items = products.list_products(active_only=False, search=q or None, category=cat if cat in products.CATEGORIES else None)
-    return render_template("admin/products.html", items=items, q=q, cat=cat, cats=products.CATEGORIES)
+    return render_template("admin/products.html", items=items, q=q, cat=cat, cats=products.CATEGORIES,
+                           today=date.today().isoformat())
 
 
 @bp.route("/products/new", methods=["GET", "POST"])
@@ -154,7 +190,7 @@ def product_new():
         flash(f"“{data['name']}” added.", "success")
         return redirect(_back(_edit_url(pid)))
     return render_template("admin/product_form.html", product=None,
-                           form={"is_active": 1, "in_stock": 1, "discount_percent": 0}, cats=products.CATEGORIES)
+                           form={"is_active": 1, "in_stock": 1, "stock_qty": 1, "discount_percent": 0}, cats=products.CATEGORIES)
 
 
 def _edit_url(product_id, anchor=""):

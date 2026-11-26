@@ -61,6 +61,23 @@ def init_schema():
     db = get_db()
     db.executescript(schema)
     db.commit()
+    _upgrade()
+
+
+def _columns(table):
+    if using_postgres():
+        rows = query("SELECT column_name AS name FROM information_schema.columns "
+                     "WHERE table_schema = current_schema() AND table_name = ?", (table,))
+    else:
+        rows = query(f"PRAGMA table_info({table})")
+    return {r["name"] for r in rows}
+
+
+def _upgrade():
+    """Columns added after the site went live (CREATE TABLE IF NOT EXISTS leaves old tables as they were)."""
+    if "stock_qty" not in _columns("products"):
+        execute("ALTER TABLE products ADD COLUMN stock_qty INTEGER NOT NULL DEFAULT 0")
+        execute("UPDATE products SET stock_qty = in_stock")      # in stock -> 1 unit, sold out -> 0
 
 
 def postgres_schema(sql):

@@ -1,0 +1,36 @@
+{# Small charts drawn with plain HTML/CSS: one colour, hover or tap a bar for its value. #}
+
+{% macro day_bars(days, empty_text) %}
+  {% set top = days|map(attribute='value')|max %}
+  <div class="chart" role="img" aria-label="Sales per day, last {{ days|length }} days">
+    {% if top > 0 %}
+      <p class="chart-max">{{ top|money }}</p>
+      <div class="chart-bars">
+        {% for d in days %}
+          <span class="cbar{{ ' is-zero' if not d.value }}{{ ' tip-end' if loop.index > (days|length) // 2 }}" tabindex="0" style="--h: {{ (d.value / top * 100)|round(1) }}%"
+                data-tip="{{ d.label }} · {{ d.value|money }}"><i></i></span>
+        {% endfor %}
+      </div>
+      <div class="chart-x"><span>{{ days[0].label }}</span><span>{{ days[(days|length) // 2].label }}</span><span>Today</span></div>
+    {% else %}
+      <p class="chart-empty">{{ empty_text }}</p>
+    {% endif %}
+  </div>
+  {# the same numbers as a table, for screen readers #}
+  <table class="sr-only"><tr><th>Day</th><th>Sales</th></tr>{% for d in days if d.value %}<tr><td>{{ d.label }}</td><td>{{ d.value|money }}</td></tr>{% endfor %}</table>
+{% endmacro %}
+
+{% macro cat_bars(rows, empty_text, unit_label=None) %}
+  {% if rows %}
+    {% set top = rows|map(attribute='value')|max %}
+    <ul class="hbars">
+      {% for r in rows %}
+        <li><span class="hb-label">{{ categories.get(r.key, r.key|title) }}</span>
+          <span class="hb-track"><i style="width: {{ (r.value / top * 100 if top else 0)|round(1) }}%"></i></span>
+          <span class="hb-value">{{ r.value|money }}{% if unit_label and r.units %}<small>{{ r.units }} {{ unit_label }}</small>{% endif %}</span></li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="chart-empty">{{ empty_text }}</p>
+  {% endif %}
+{% endmacro %}

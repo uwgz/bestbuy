@@ -19,7 +19,7 @@ CATEGORIES = {                     # key (stored on each product): (label, icon)
 }
 
 EDITABLE = ("slug", "name", "short_name", "category", "description", "tagline", "price_cents", "discount_percent",
-            "discount_ends", "badge", "icon", "studio_gear", "gear_role", "home_position", "in_stock",
+            "discount_ends", "badge", "icon", "studio_gear", "gear_role", "home_position", "in_stock", "stock_qty",
             "is_active", "position")
 
 

@@ -1,6 +1,6 @@
 """Reading and checking admin form input."""
 import re
-from datetime import date
+from datetime import date, timedelta
 
 from ...models.products import CATEGORIES
 
@@ -66,7 +66,8 @@ def product_from_form(f):
         "badge": f.get("badge", "").strip()[:30],
         "icon": CATEGORIES[category][1],
         "home_position": parse_int(f.get("home_position"), 0, 99, "Home page position") if f.get("on_home") else 0,
-        "in_stock": 1 if f.get("in_stock") else 0,
+        "stock_qty": (qty := parse_int(f.get("stock_qty"), 0, 100000, "Units in stock")),
+        "in_stock": 1 if qty > 0 else 0,
         "is_active": 1 if f.get("is_active") else 0,
     }
 
@@ -88,3 +89,22 @@ def service_from_form(f, icons):
         "is_active": 1 if f.get("is_active") else 0,
         "position": parse_int(f.get("position"), 0, 999, "Order"),
     }
+
+
+def sale_from_form(f):
+    try:
+        product_id = int(f.get("product_id") or 0)
+    except ValueError:
+        product_id = 0
+    if not product_id:
+        raise FormError("Choose the product you sold.")
+    qty = parse_int(f.get("qty"), 1, 10000, "Quantity")
+    unit = parse_price(f.get("unit_price"))
+    try:
+        sold_on = date.fromisoformat((f.get("sold_on") or "").strip())
+    except ValueError:
+        raise FormError("Use a valid date for the sale.")
+    if sold_on > date.today() + timedelta(days=1):   # a day of slack: the server runs on UTC
+        raise FormError("The sale date can't be in the future.")
+    return {"product_id": product_id, "qty": qty, "unit_cents": unit, "sold_on": sold_on.isoformat(),
+            "note": (f.get("note") or "").strip()[:200]}

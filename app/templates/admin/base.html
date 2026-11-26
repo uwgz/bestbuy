@@ -27,7 +27,8 @@
   {% set ep = request.endpoint or '' %}
   {% if g.user %}
   {% set nav = [('admin.dashboard','Dashboard','home','admin.dashboard'),
-                ('admin.products_list','Products','shop','admin.product'),
+                ('admin.sales_page','Sales','chart','admin.sale'),
+                ('admin.products_list','Stock','package','admin.product'),
                 ('admin.services_list','Studio','camera','admin.service'),
                 ('admin.portfolio_admin','Portfolio','image','admin.portfolio'),
                 ('admin.inbox_page','Inbox','mail','admin.inbox'),
@@ -69,7 +70,7 @@
   <aside class="sidebar" id="sidebar">
     <nav aria-label="Admin">
       {% for endpoint, label, ico, prefix in nav %}
-        {% if loop.index in (3, 6) %}<hr class="sb-sep">{% endif %}
+        {% if loop.index in (4, 7) %}<hr class="sb-sep">{% endif %}
         <a href="{{ url_for(endpoint) }}" class="sb-link{{ ' active' if ep.startswith(prefix) }}" data-label="{{ label }}" title="{{ label }}">
           {{ icon(ico) }}<span class="sb-text">{{ label }}</span>
           {% if endpoint == 'admin.inbox_page' and unread and unread.total %}<b class="sb-count">{{ unread.total }}</b>{% endif %}

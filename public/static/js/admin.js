@@ -227,6 +227,7 @@
     body.innerHTML = "";
     body.appendChild(form);
     initForms(body);
+    document.dispatchEvent(new CustomEvent("modal:open", { detail: { form, trigger } }));
     form.querySelector("input:not([type=hidden]):not([type=file]), textarea, select")?.focus();
   }
 
@@ -271,3 +272,42 @@ document.querySelectorAll(".gw-kind").forEach(set => {
   set.addEventListener("change", sync);
   sync();
 });
+
+
+/* "Record a sale" pop-up: picking a product fills in its price; the total updates as you type */
+(() => {
+  const form = el => el.closest("form");
+  const fmt = (f, value) => {
+    try {
+      return new Intl.NumberFormat(undefined, { style: "currency", currency: f.dataset.currency,
+        maximumFractionDigits: Number(f.dataset.decimals || 0) }).format(value);
+    } catch (e) { return value.toFixed(Number(f.dataset.decimals || 0)); }
+  };
+  const update = f => {
+    const out = f.querySelector("[data-sale-total] b");
+    if (!out) return;
+    const qty = Number(f.querySelector("[data-sale-qty]").value || 0);
+    const unit = Number((f.querySelector("[data-sale-unit]").value || "").replace(/[^\d.]/g, ""));
+    out.textContent = qty > 0 && unit > 0 ? fmt(f, qty * unit) : "—";
+  };
+  document.addEventListener("change", e => {
+    if (!e.target.matches("[data-sale-product]")) return;
+    const opt = e.target.selectedOptions[0];
+    const f = form(e.target);
+    if (opt && opt.dataset.price) f.querySelector("[data-sale-unit]").value = opt.dataset.price;
+    update(f);
+  });
+  document.addEventListener("input", e => {
+    if (e.target.matches("[data-sale-qty], [data-sale-unit]")) update(form(e.target));
+  });
+  // a product's "Sell" button: fill in that product, its current price and how many are in stock
+  document.addEventListener("modal:open", e => {
+    const { form: f, trigger: t } = e.detail;
+    if (!t.dataset.saleId) return;
+    f.querySelector("[data-sale-product-id]").value = t.dataset.saleId;
+    f.querySelector("[data-sale-unit]").value = t.dataset.salePrice;
+    const n = Number(t.dataset.saleStock || 0);
+    f.querySelector("[data-sale-stock-note]").textContent = n ? ` · ${n} in stock` : " · none in stock";
+    update(f);
+  });
+})();

@@ -62,7 +62,9 @@
 
 /* ---------- Base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+/* The page colour is set on <html> too: Safari on iPhone (iOS 26) paints the strip behind the clock and
+   battery with the page's background, and ignores the theme-color tag the other browsers use. */
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; background: var(--bg); }
 body {
   margin: 0; background: var(--bg); color: var(--text);
   font: 17px/1.47 var(--font); letter-spacing: -.022em;
@@ -606,6 +608,8 @@ th { color: var(--muted); font-weight: 600; }
    ========================================================================== */
 :root { --nav-h: 64px; --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
 .site-header { height: var(--nav-h); background: color-mix(in srgb, var(--bg) 88%, transparent); }
+/* phones: a solid top bar, so Safari extends exactly this colour up behind the clock and battery */
+@media (max-width: 833px) { .site-header { background: var(--bg); -webkit-backdrop-filter: none; backdrop-filter: none; } }
 .nav { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; height: 100%; padding: 0 20px; max-width: 1200px; }
 .logo { justify-self: start; margin: 0; }
 .logo-text { display: none; }
