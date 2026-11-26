@@ -105,35 +105,28 @@ def logout():
 @login_required
 def dashboard():
     return render_template("admin/dashboard.html", counts=products.counts(), hosting_warnings=_hosting_warnings(),
-                           money=sales.summary(), recent_sales=sales.recent(6),
+                           charts=sales.charts(),
                            on_sale=products.list_products(active_only=False, on_sale=True),
                            recent_bookings=inbox.bookings()[:5], recent_messages=inbox.messages()[:5],
                            services_count=len(services.list_services(active_only=False)),
                            portfolio_count=len(portfolio.list_items()))
 
 
-def _sale_products():
-    """Products for the 'Record a sale' pop-up: in stock first, then by name."""
-    items = products.list_products(active_only=False)
-    return sorted(items, key=lambda p: (p["stock_qty"] <= 0, p["short"].lower()))
-
-
 # ======================================================================
-#  Sales
+#  Sales (recorded from the Stock page; listed there too)
 # ======================================================================
 @bp.route("/sales", methods=["GET", "POST"])
 @login_required
 def sales_page():
-    if request.method == "POST":
-        try:
-            data = sale_from_form(request.form)
-            sales.record(user_id=g.user["id"], **data)
-            flash("Sale recorded.", "success")
-        except (FormError, ValueError) as e:
-            flash(str(e), "error")
-        return redirect(_back(url_for("admin.sales_page")))
-    return render_template("admin/sales.html", items=sales.recent(), money=sales.summary(),
-                           sale_products=_sale_products(), today=date.today().isoformat())
+    if request.method == "GET":                  # the old Sales page now lives on the Stock page
+        return redirect(url_for("admin.products_list") + "#sales")
+    try:
+        data = sale_from_form(request.form)
+        sales.record(user_id=g.user["id"], **data)
+        flash("Sale recorded.", "success")
+    except (FormError, ValueError) as e:
+        flash(str(e), "error")
+    return redirect(_back(url_for("admin.products_list")))
 
 
 @bp.route("/sales/<int:sale_id>/delete", methods=["POST"])
@@ -141,7 +134,7 @@ def sales_page():
 def sale_delete(sale_id):
     if sales.delete(sale_id):
         flash("Sale removed and its units put back in stock.", "success")
-    return redirect(_back(url_for("admin.sales_page")))
+    return redirect(_back(url_for("admin.products_list") + "#sales"))
 
 
 def _hosting_warnings():
@@ -168,8 +161,12 @@ def products_list():
     q = request.args.get("q", "").strip()
     cat = request.args.get("category") or None
     items = products.list_products(active_only=False, search=q or None, category=cat if cat in products.CATEGORIES else None)
+    period = request.args.get("period")
+    period = period if period in sales.PERIODS else sales.DEFAULT_PERIOD
     return render_template("admin/products.html", items=items, q=q, cat=cat, cats=products.CATEGORIES,
-                           today=date.today().isoformat())
+                           today=date.today().isoformat(), period=period, periods=sales.PERIODS,
+                           sold=sales.period_summary(period), stock=sales.stock_summary(),
+                           sales_list=sales.list_sales(period))
 
 
 @bp.route("/products/new", methods=["GET", "POST"])

@@ -53,20 +53,38 @@ def test_sale_form_checks_input(owner, app):
         assert query("SELECT COUNT(*) AS n FROM sales", one=True)["n"] == 0
 
 
-def test_dashboard_money_and_charts(owner, app):
+def test_dashboard_has_charts_but_no_money_cards_or_buttons(owner, app):
     pid = _product(app, qty=4, price_cents=100000)
     _sell(owner, pid, qty="1", price="900")
     html = owner.get("/altar/").get_data(as_text=True)
-    assert "Stock value" in html and "Best seller in" in html and "Camera X" in html
     assert "Sales, last 30 days" in html and 'class="cbar' in html and "Sales by category" in html
-    assert "Quick actions" not in html and '<a class="stat"' not in html     # cards are information only
-    assert "Record a sale" not in html and "data-modal=" not in html     # the dashboard has no buttons
+    assert "Stock value</span>" not in html and "Recent sales" not in html     # those live on the Stock page
+    assert "Quick actions" not in html and '<a class="stat"' not in html and "data-modal=" not in html
     from app.models import sales
     with app.app_context():
-        m = sales.summary()
-    assert m["month"]["value"] == 900 and m["month"]["units"] == 1
-    assert m["stock"]["units"] >= 3 and len(m["days"]) == 30 and m["days"][-1]["value"] == 900
-    assert owner.get("/altar/sales").status_code == 200
+        c = sales.charts()
+    assert len(c["days"]) == 30 and c["days"][-1]["value"] == 900
+
+
+def test_stock_page_has_stock_sales_filter_and_history(owner, app):
+    pid = _product(app, qty=4, price_cents=100000)
+    _sell(owner, pid, qty="1", price="900")
+    _sell(owner, pid, qty="2", price="800", day=(date.today() - timedelta(days=60)).isoformat())
+    html = owner.get("/altar/products").get_data(as_text=True)          # default: past month
+    assert "In stock now" in html and "Stock value" in html and "Sold out" in html
+    for short in ("7 days", "1 month", "3 months", "6 months", "1 year", "All time"):
+        assert short in html
+    assert "Sales · past month" in html and html.count('class="list-row sale-row"') == 1
+    html = owner.get("/altar/products?period=3m").get_data(as_text=True)
+    assert html.count('class="list-row sale-row"') == 2 and "Sales · past 3 months" in html
+    assert owner.get("/altar/products?period=nonsense").status_code == 200
+    assert owner.get("/altar/sales").headers["Location"].endswith("/altar/products#sales")
+    from app.models import sales
+    with app.app_context():
+        assert sales.period_summary("7d")["value"] == 900 and sales.period_summary("all")["units"] == 3
+        assert sales.period_summary("all")["average"] == 1250
+        st = sales.stock_summary()
+    assert st["units"] >= 1 and st["products"] >= 1
 
 
 def test_product_form_sets_units(owner, app):
@@ -101,3 +119,4 @@ def test_products_list_has_sell_button(owner, app):
                                          "_back": "/altar/products"})
     assert r.headers["Location"].endswith("/altar/products")
     assert _stock(app, pid) == (1, 1)
+    assert 'data-label="Sales"' not in owner.get("/altar/").get_data(as_text=True)     # no separate Sales page

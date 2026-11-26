@@ -7,16 +7,6 @@
 </div>
 {% for w in hosting_warnings %}<p class="upload-error">{{ w }} See README → “Hosting on Vercel”.</p>{% endfor %}
 
-{# money #}
-<div class="stats stats-money">
-  <div class="stat"><span>Stock value</span><b>{{ money.stock.value|money }}</b><small>{{ money.stock.units }} unit{{ 's' if money.stock.units != 1 }} · {{ money.stock.products }} product{{ 's' if money.stock.products != 1 }}</small></div>
-  <div class="stat"><span>Sales in {{ money.month_name }}</span><b>{{ money.month.value|money }}</b><small>{{ money.month.units }} item{{ 's' if money.month.units != 1 }} sold · {{ money.month.sales }} sale{{ 's' if money.month.sales != 1 }}</small></div>
-  <div class="stat"><span>All-time sales</span><b>{{ money.total.value|money }}</b><small>{{ money.total.units }} item{{ 's' if money.total.units != 1 }} sold</small></div>
-  <div class="stat"><span>Best seller in {{ money.month_name }}</span>
-    {% if money.best %}<b class="stat-name" title="{{ money.best.product_name }}">{{ money.best.product_name }}</b><small>{{ money.best.units }} sold</small>
-    {% else %}<b>—</b><small>No sales yet this month</small>{% endif %}</div>
-</div>
-
 {# store #}
 <div class="stats stats-info">
   <div class="stat"><b>{{ counts.active }}</b><span>Products live</span></div>
@@ -26,28 +16,20 @@
 </div>
 
 <section class="card chart-card">
-  <div class="card-head"><h2>Sales, last 30 days</h2><a href="{{ url_for('admin.sales_page') }}">All sales</a></div>
-  {{ day_bars(money.days, "No sales in the last 30 days. Record one with Sell on the Stock page.") }}
+  <div class="card-head"><h2>Sales, last 30 days</h2><a href="{{ url_for('admin.products_list') }}#sales">All sales</a></div>
+  {{ day_bars(charts.days, "No sales in the last 30 days. Record one with Sell on the Stock page.") }}
 </section>
 
 <div class="adm-cols">
   <section class="card">
-    <div class="card-head"><h2>Sales by category · {{ money.month_name }}</h2></div>
-    {{ cat_bars(money.by_category, "No sales this month yet.", "sold") }}
+    <div class="card-head"><h2>Sales by category · {{ charts.month_name }}</h2></div>
+    {{ cat_bars(charts.by_category, "No sales this month yet.", "sold") }}
   </section>
   <section class="card">
     <div class="card-head"><h2>Stock value by category</h2><a href="{{ url_for('admin.products_list') }}">Stock</a></div>
-    {{ cat_bars(money.stock.by_category, "No units in stock. Set “Units in stock” on your products.") }}
+    {{ cat_bars(charts.stock_by_category, "No units in stock. Set “Units in stock” on your products.") }}
   </section>
 
-  <section class="card">
-    <div class="card-head"><h2>Recent sales</h2><a href="{{ url_for('admin.sales_page') }}">All sales</a></div>
-    {% for s in recent_sales %}
-      <div class="row-item"><span class="grow"><b>{{ s.product_name }}</b><small>{{ s.qty }} × {{ (s.unit_cents / 100)|money }} · {{ s.sold_on|long_date }}</small></span><span>{{ (s.total_cents / 100)|money }}</span></div>
-    {% else %}
-      <p class="muted small">No sales recorded yet.</p>
-    {% endfor %}
-  </section>
   <section class="card">
     <div class="card-head"><h2>Latest bookings</h2><a href="{{ url_for('admin.inbox_page') }}">Inbox</a></div>
     {% for b in recent_bookings %}

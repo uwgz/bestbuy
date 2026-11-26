@@ -574,3 +574,18 @@ form.card > .btn, .adm-form > .btn, .auth-form + .x { display: flex; margin-left
 }
 .sale-stock { margin-left: 2px; font-size: 13px; }
 @media (max-width: 599px) { .hide-phone { display: none; } }
+
+/* Stock page: period filter */
+.period-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 20px 0 10px; }
+.period-head .adm-h2 { margin: 0; }
+.period-tabs { display: flex; gap: 2px; padding: 3px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; overflow-x: auto; max-width: 100%; }
+.period-tabs a { padding: 5px 11px; border-radius: 7px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.period-tabs a:hover { color: var(--text); text-decoration: none; }
+.period-tabs a.active { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: var(--shadow); }
+.stat-of { font-style: normal; font-size: 14px; font-weight: 500; color: var(--muted); }
+.stat-warn b { color: var(--danger); }
+.sale-row .grow b { font-weight: 600; }
+.stat-low b { color: #d97706; }
+.more-sales > summary { list-style: none; cursor: pointer; padding: 11px 14px; border-top: 1px solid var(--line); color: var(--accent); font-size: 13.5px; text-align: center; }
+.more-sales > summary::-webkit-details-marker { display: none; }
+.more-sales[open] > summary { display: none; }

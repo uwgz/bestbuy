@@ -2,11 +2,40 @@
 {% block title %}Stock{% endblock %}
 {% block content %}
 <div class="adm-head">
-  <div><h1>Stock</h1><p class="muted">{{ items|length }} product{{ '' if items|length == 1 else 's' }}</p></div>
+  <div><h1>Stock</h1><p class="muted">Your products, what's on the shelves and what has sold.</p></div>
   <a class="btn" href="{{ url_for('admin.product_new') }}" data-modal data-modal-title="Add a product">+ Add product</a>
 </div>
 
+{# what is on the shelves right now #}
+<h2 class="adm-h2">In stock now</h2>
+<div class="stats stats-money">
+  <div class="stat"><span>Stock value</span><b>{{ stock.value|money }}</b><small>at today's prices</small></div>
+  <div class="stat"><span>Units in stock</span><b>{{ stock.units }}</b><small>across {{ stock.in_stock }} product{{ 's' if stock.in_stock != 1 }}</small></div>
+  <div class="stat{{ ' stat-low' if stock.low }}"><span>Running low</span><b>{{ stock.low }}</b><small>product{{ 's' if stock.low != 1 }} with 1–2 units left</small></div>
+  <div class="stat{{ ' stat-warn' if stock.sold_out }}"><span>Sold out</span><b>{{ stock.sold_out }}</b><small>{{ 'need restocking' if stock.sold_out else 'nothing sold out' }}</small></div>
+</div>
+
+{# sales for the chosen period #}
+<div class="period-head">
+  <h2 class="adm-h2">Sales</h2>
+  <nav class="period-tabs" aria-label="Period">
+    {% for key, (label, _, short) in periods.items() %}
+      <a href="{{ url_for('admin.products_list', period=key, q=q or None, category=cat) }}" class="{{ 'active' if key == period }}" title="{{ label }}"{{ ' aria-current="true"' if key == period }}>{{ short }}</a>
+    {% endfor %}
+  </nav>
+</div>
+<div class="stats stats-money">
+  <div class="stat"><span>Sales · {{ sold.label|lower }}</span><b>{{ sold.value|money }}</b><small>{{ sold.sales }} sale{{ 's' if sold.sales != 1 }}</small></div>
+  <div class="stat"><span>Items sold</span><b>{{ sold.units }}</b><small>{{ sold.label|lower }}</small></div>
+  <div class="stat"><span>Average sale</span><b>{{ sold.average|money }}</b><small>per sale</small></div>
+  <div class="stat"><span>Best seller</span>
+    {% if sold.best %}<b class="stat-name" title="{{ sold.best.product_name }}">{{ sold.best.product_name }}</b><small>{{ sold.best.units }} sold</small>
+    {% else %}<b>—</b><small>no sales {{ sold.label|lower }}</small>{% endif %}</div>
+</div>
+
+<h2 class="adm-h2">Products</h2>
 <form class="adm-filter" method="get">
+  <input type="hidden" name="period" value="{{ period }}">
   <input type="search" name="q" value="{{ q }}" placeholder="Search products…">
   <select name="category" onchange="this.form.submit()">
     <option value="">All categories</option>
@@ -40,6 +69,23 @@
     </div>
   {% else %}
     <div class="empty">No products found.</div>
+  {% endfor %}
+</div>
+
+{# every sale in the chosen period; removing one puts its units back #}
+<h2 class="adm-h2" id="sales">Sales · {{ sold.label|lower }}</h2>
+<div class="list sales-list">
+  {% for s in sales_list %}
+    {% if loop.index == 11 %}<details class="more-sales"><summary>Show all {{ sales_list|length }} sales</summary>{% endif %}
+    <div class="list-row sale-row">
+      <span class="grow"><b>{{ s.product_name }}</b><small>{{ s.sold_on|long_date }} · {{ s.qty }} × {{ (s.unit_cents / 100)|money }}{% if s.note %} · {{ s.note }}{% endif %}</small></span>
+      <span class="sale-amount">{{ (s.total_cents / 100)|money }}</span>
+      <form method="post" action="{{ url_for('admin.sale_delete', sale_id=s.id) }}" data-confirm="Remove this sale of {{ s.product_name }}? Its {{ s.qty }} unit{{ 's' if s.qty != 1 }} go back in stock.">{{ csrf_field() }}
+        <input type="hidden" name="_back" value="{{ request.full_path }}#sales"><button class="link-btn" type="submit">Remove</button></form>
+    </div>
+    {% if loop.last and loop.length > 10 %}</details>{% endif %}
+  {% else %}
+    <div class="empty">No sales {{ sold.label|lower }}. Use Sell on a product when it sells.</div>
   {% endfor %}
 </div>
 
