@@ -1,18 +1,37 @@
 {# one product in a grid; expects `p` #}
-<a href="{{ url_for('product', slug=p.slug) }}" class="group flex flex-col">
-  <div class="relative aspect-square overflow-hidden rounded-3xl bg-zinc-100 dark:bg-zinc-900">
-    <span class="absolute inset-0 grid place-items-center text-zinc-300 dark:text-zinc-700">{{ icon(p.icon, "size-16 stroke-[1.2]") }}</span>
-    <img src="{{ p.image }}" alt="{{ p.short }}" loading="lazy" onerror="this.remove()" class="relative size-full object-cover transition duration-500 group-hover:scale-[1.04]">
-    <div class="absolute left-3 top-3 flex gap-1.5">
-      {% if p.on_sale %}<span class="rounded-full bg-sale px-2.5 py-1 text-xs font-semibold text-white">−{{ p.discount }}%</span>{% endif %}
-      {% if p.badge %}<span class="rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-zinc-900 backdrop-blur">{{ p.badge }}</span>{% endif %}
+<div class="group relative flex flex-col">
+  <a href="{{ url_for('product', slug=p.slug) }}" class="flex flex-col">
+    <div class="relative aspect-square overflow-hidden rounded-3xl bg-zinc-100 dark:bg-zinc-900">
+      <span class="absolute inset-0 grid place-items-center text-zinc-300 dark:text-zinc-700">{{ icon(p.icon, "size-16 stroke-[1.2]") }}</span>
+      <img src="{{ p.image }}" alt="{{ p.short }}" loading="lazy" onerror="this.remove()" class="relative size-full object-cover transition duration-500 group-hover:scale-[1.04]">
+      <div class="absolute left-3 top-3 flex gap-1.5">
+        {% if p.on_sale %}<span class="rounded-full bg-sale px-2.5 py-1 text-xs font-semibold text-white">−{{ p.discount }}%</span>{% endif %}
+        {% if p.badge %}<span class="rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold text-zinc-900 backdrop-blur">{{ p.badge }}</span>{% endif %}
+      </div>
+      {% if not p.stock %}<span class="absolute inset-x-3 bottom-3 rounded-full bg-black/70 py-1.5 text-center text-xs font-medium text-white">Sold out</span>{% endif %}
     </div>
-    {% if not p.stock %}<span class="absolute inset-x-3 bottom-3 rounded-full bg-black/70 py-1.5 text-center text-xs font-medium text-white">Sold out</span>{% endif %}
-  </div>
-  <p class="mt-3 text-xs text-zinc-500 dark:text-zinc-400">{{ p.category_label }}</p>
-  <h3 class="mt-0.5 text-[17px] leading-snug group-hover:underline">{{ p.short }}</h3>
-  <p class="mt-1 text-[15px]">
-    {% if p.on_sale %}<span class="font-semibold text-sale">{{ money(p.final_price) }}</span> <s class="text-sm text-zinc-400">{{ money(p.price) }}</s>
-    {% else %}<span class="font-semibold">{{ money(p.price) }}</span>{% endif %}
-  </p>
-</a>
+    <p class="mt-3 text-xs text-zinc-500 dark:text-zinc-400">{{ p.category_label }}</p>
+    <h3 class="mt-0.5 text-[17px] leading-snug group-hover:underline">{{ p.short }}</h3>
+    <p class="mt-1 text-[15px]">
+      {% if p.on_sale %}<span class="font-semibold text-sale">{{ money(p.final_price) }}</span> <s class="text-sm text-zinc-400">{{ money(p.price) }}</s>
+      {% else %}<span class="font-semibold">{{ money(p.price) }}</span>{% endif %}
+    </p>
+  </a>
+  {% if p.stock %}
+    {# cart buttons on the photo: + when not in the cart; − qty + when it is (the − is a bin at 1).
+       Computers: they appear on hover. Phones and tablets (no hover): always shown. #}
+    <div class="pointer-events-none absolute inset-x-0 top-0 aspect-square">
+      <div data-card-cart data-slug="{{ p.slug }}" data-stock="{{ p.stock }}" data-name="{{ p.short }}"
+           class="pointer-events-auto absolute bottom-3 right-3 translate-y-1 opacity-0 transition duration-200 group-hover:translate-y-0 group-hover:opacity-100 focus-within:translate-y-0 focus-within:opacity-100 [@media(hover:none)]:translate-y-0 [@media(hover:none)]:opacity-100">
+        <button type="button" data-card-add aria-label="Add {{ p.short }} to cart" title="Add to cart"
+                class="grid size-11 place-items-center rounded-full bg-white text-zinc-900 shadow-lg shadow-black/20 transition hover:scale-105 hover:bg-brand hover:text-white active:scale-95 dark:bg-zinc-800 dark:text-white">{{ icon("plus", "size-5") }}</button>
+        <div data-card-stepper hidden class="flex h-11 items-center rounded-full bg-white text-zinc-900 shadow-lg shadow-black/20 dark:bg-zinc-800 dark:text-white">
+          <button type="button" data-card-dec class="grid size-11 place-items-center rounded-full transition hover:bg-black/5 active:scale-90 dark:hover:bg-white/10">
+            <span data-card-minus>{{ icon("minus", "size-4") }}</span><span data-card-bin hidden class="text-sale">{{ icon("trash", "size-4") }}</span></button>
+          <span data-card-qty class="min-w-6 text-center text-[15px] font-semibold tabular-nums">1</span>
+          <button type="button" data-card-inc aria-label="One more {{ p.short }}" class="grid size-11 place-items-center rounded-full transition hover:bg-black/5 active:scale-90 disabled:opacity-30 dark:hover:bg-white/10">{{ icon("plus", "size-4") }}</button>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+</div>

@@ -6,15 +6,23 @@
   <p class="mt-2 max-w-lg text-zinc-500">Every device is on display. Try it, ask questions, pay and take it home, or pick up what you ordered on WhatsApp.</p>
 
   <div class="mt-8 grid gap-6 md:grid-cols-2">
-    <div class="rounded-3xl bg-zinc-100 p-6 sm:p-8 dark:bg-zinc-900">
+    <div class="flex flex-col rounded-3xl bg-zinc-100 p-6 sm:p-8 dark:bg-zinc-900">
       <h2 class="text-xl">The shop</h2>
       <ul class="mt-4 space-y-4">
-        {% if store.address %}<li class="flex gap-3">{{ icon("map-pin", "mt-0.5 text-brand") }}<span>{{ store.address }}{% if store.map_url %}<br><a class="text-brand hover:underline" href="{{ store.map_url }}" target="_blank" rel="noopener">Open in Maps ›</a>{% endif %}</span></li>{% endif %}
+        {% if store.address %}<li class="flex gap-3">{{ icon("map-pin", "mt-0.5 text-brand") }}<span>{{ store.address }}<br><a class="text-brand hover:underline" href="{{ store.map_url or 'https://www.google.com/maps/search/?api=1&query=' ~ (store.name ~ ', ' ~ store.address)|urlencode }}" target="_blank" rel="noopener">Open in Maps ›</a></span></li>{% endif %}
         {% if store.hours %}<li class="flex gap-3">{{ icon("clock", "mt-0.5 text-brand") }}<span>{{ store.hours }}</span></li>{% endif %}
         {% if store.phone %}<li class="flex gap-3">{{ icon("phone", "mt-0.5 text-brand") }}<a class="hover:underline" href="tel:{{ store.phone|replace(' ', '') }}">{{ store.phone }}</a></li>{% endif %}
         {% if store.email %}<li class="flex gap-3">{{ icon("mail", "mt-0.5 text-brand") }}<a class="hover:underline" href="mailto:{{ store.email }}">{{ store.email }}</a></li>{% endif %}
         <li class="flex gap-3">{{ icon("whatsapp", "mt-0.5 text-wa") }}<a class="hover:underline" href="{{ whatsapp_link('Hello ' ~ store.name ~ '!') }}" target="_blank" rel="noopener">Chat on WhatsApp</a></li>
       </ul>
+      {% if store.address %}
+        {# the shop on a map, inside the card (dark mode: the map turns dark too) #}
+        <div class="relative mt-6 min-h-64 flex-1 overflow-hidden rounded-2xl bg-zinc-200 dark:bg-zinc-800">
+          <iframe src="https://maps.google.com/maps?q={{ (store.name ~ ', ' ~ store.address)|urlencode }}&z=16&output=embed" title="{{ store.name }} on the map"
+                  loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen
+                  class="absolute inset-0 size-full border-0 dark:[filter:invert(90%)_hue-rotate(180deg)_brightness(.95)]"></iframe>
+        </div>
+      {% endif %}
     </div>
 
     <form data-contact class="rounded-3xl border border-zinc-200 p-6 sm:p-8 dark:border-zinc-800">

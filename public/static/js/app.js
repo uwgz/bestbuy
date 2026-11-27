@@ -29,13 +29,45 @@
 
   // ---------- cart (slug -> quantity) ----------
   const getCart = () => read("cart", {});
-  const setCart = cart => { write("cart", cart); paintCount(); };
+  const setCart = cart => { write("cart", cart); paintCount(); paintCards(); };
   const paintCount = () => {
     const n = Object.values(getCart()).reduce((a, b) => a + b, 0);
     $$("[data-cart-count]").forEach(el => { el.textContent = n > 99 ? "99+" : n; el.hidden = !n; });
   };
+  // product cards: + on the photo, then − qty + (the − becomes a bin at 1)
+  function paintCards() {
+    const cart = getCart();
+    $$("[data-card-cart]").forEach(box => {
+      const qty = cart[box.dataset.slug] || 0, stock = Number(box.dataset.stock || 0);
+      $("[data-card-add]", box).hidden = qty > 0;
+      $("[data-card-stepper]", box).hidden = !qty;
+      $("[data-card-qty]", box).textContent = qty;
+      $("[data-card-minus]", box).hidden = qty === 1;
+      $("[data-card-bin]", box).hidden = qty !== 1;
+      $("[data-card-dec]", box).setAttribute("aria-label", qty === 1 ? `Remove ${box.dataset.name} from cart` : `One less ${box.dataset.name}`);
+      $("[data-card-inc]", box).disabled = qty >= stock;
+    });
+  }
+  document.addEventListener("click", e => {
+    const btn = e.target.closest("[data-card-add], [data-card-inc], [data-card-dec]");
+    if (!btn) return;
+    e.preventDefault();
+    const box = btn.closest("[data-card-cart]"), slug = box.dataset.slug, stock = Number(box.dataset.stock || 0);
+    const cart = getCart(), qty = cart[slug] || 0;
+    if (btn.matches("[data-card-dec]")) {
+      if (qty <= 1) { delete cart[slug]; toast(`${box.dataset.name} removed from your cart`); }
+      else cart[slug] = qty - 1;
+    } else if (qty >= stock) {
+      toast(`Only ${stock} in stock`); return;
+    } else {
+      cart[slug] = qty + 1;
+      if (!qty) toast(`${box.dataset.name} added to your cart`);
+    }
+    setCart(cart);
+  });
   paintCount();
-  window.addEventListener("storage", e => e.key === "cart" && paintCount());   // another tab changed it
+  paintCards();
+  window.addEventListener("storage", e => { if (e.key === "cart") { paintCount(); paintCards(); } });   // another tab changed it
 
   // product page: quantity stepper and "Add to cart"
   const qtyInput = $("[data-qty]");
