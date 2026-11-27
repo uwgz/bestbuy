@@ -129,6 +129,22 @@ def sales_page():
     return redirect(_back(url_for("admin.products_list")))
 
 
+@bp.route("/products/<int:product_id>/refill", methods=["POST"])
+@login_required
+def product_refill(product_id):
+    item = products.get(product_id, active_only=False) or abort(404)
+    try:
+        qty = int(request.form.get("qty") or 0)
+    except ValueError:
+        qty = 0
+    if not 1 <= qty <= 100000:
+        flash("Enter how many units arrived (1 or more).", "error")
+    else:
+        products.refill(product_id, qty)
+        flash(f"Added {qty} {item['short']}. {item['stock_qty'] + qty} in stock now.", "success")
+    return redirect(_back(url_for("admin.products_list")))
+
+
 @bp.route("/sales/<int:sale_id>/delete", methods=["POST"])
 @login_required
 def sale_delete(sale_id):

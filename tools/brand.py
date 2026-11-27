@@ -73,7 +73,6 @@ def write_svgs():
     style = ("<style>.bg{fill:#000}.fg path{fill:#fff;stroke:#fff}.fg path[fill=none]{fill:none}"
              "@media (prefers-color-scheme:dark){.bg{fill:#fff}.fg path{fill:#000;stroke:#000}.fg path[fill=none]{fill:none}}</style>\n")
     (STATIC / "favicon.svg").write_text(round_icon(style=style))
-    (PARTIALS / "loader_mark.svg").write_text(animated("loader-mark", VIEW))
     (PARTIALS / "logo_anim.svg").write_text(animated("logo-mark", TIGHT, NAME))
     (PARTIALS / "error_mark.svg").write_text(animated("error-mark", TIGHT))
 

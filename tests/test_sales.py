@@ -120,3 +120,54 @@ def test_products_list_has_sell_button(owner, app):
     assert r.headers["Location"].endswith("/altar/products")
     assert _stock(app, pid) == (1, 1)
     assert 'data-label="Sales"' not in owner.get("/altar/").get_data(as_text=True)     # no separate Sales page
+
+
+def test_cannot_sell_more_than_in_stock(owner, app):
+    pid = _product(app, qty=1)
+    r = _sell(owner, pid, qty="10")
+    page = owner.get(r.headers["Location"]).get_data(as_text=True)
+    assert "Only 1" in page and "Refill it first" in page
+    assert _stock(app, pid) == (1, 1)
+
+
+def test_refill_adds_units(owner, app):
+    pid = _product(app, qty=0)
+    owner.post(f"/altar/products/{pid}/refill", data={"qty": "5"})
+    assert _stock(app, pid) == (5, 1)
+    owner.post(f"/altar/products/{pid}/refill", data={"qty": "0"})
+    assert _stock(app, pid) == (5, 1)
+    html = owner.get("/altar/products").get_data(as_text=True)
+    assert 'id="refill-one"' in html and f'/altar/products/{pid}/refill' in html
+
+
+def test_new_products_get_a_sku_and_short_name(owner, app):
+    long_name = 'HP OmniBook X Flip 14" Touchscreen 2-in-1 Laptop - Intel Core Ultra 7 355 - 16GB RAM'
+    r = owner.post("/altar/products/new", data={"name": long_name, "category": "computers", "price": "500", "stock_qty": "2",
+                                                "is_active": "1", "discount_percent": "0"})
+    assert r.status_code == 302
+    with app.app_context():
+        row = query("SELECT id, sku, short_name FROM products WHERE name = ?", (long_name,), one=True)
+    assert row["sku"] == f"LAP-{row['id']:04d}" and row["short_name"] == 'HP OmniBook X Flip'
+
+
+def test_name_word_limits(owner, app):
+    base = {"category": "audio", "price": "10", "stock_qty": "1", "is_active": "1", "discount_percent": "0"}
+    r = owner.post("/altar/products/new", data={**base, "name": " ".join(["word"] * 21)})
+    assert b"20 words or fewer" in r.data
+    r = owner.post("/altar/products/new", data={**base, "name": "Good name", "short_name": "one two three four five"})
+    assert b"4 words" in r.data
+
+
+def test_old_products_and_sales_get_skus(tmp_path, backend, request):
+    from conftest import make_app
+    from app import db
+    a = make_app(tmp_path, backend, request)
+    with a.app_context():
+        pid = execute("INSERT INTO products (slug, name, category, price_cents, stock_qty) VALUES ('old', 'Old Speaker Thing Big Loud', 'audio', 100, 3)")
+        execute("UPDATE products SET sku = '' WHERE id = ?", (pid,))
+        execute("INSERT INTO sales (product_id, product_name, category, qty, unit_cents, total_cents, sold_on) "
+                "VALUES (?, 'Old Speaker Thing Big Loud', 'audio', 1, 100, 100, '2026-01-01')", (pid,))
+        db.init_schema()
+        p = query("SELECT sku FROM products WHERE id = ?", (pid,), one=True)
+        s = query("SELECT sku, product_short FROM sales", one=True)
+    assert p["sku"] == f"AUD-{pid:04d}" and s["sku"] == p["sku"] and s["product_short"] == "Old Speaker Thing Big"

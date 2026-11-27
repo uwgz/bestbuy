@@ -589,3 +589,9 @@ form.card > .btn, .adm-form > .btn, .auth-form + .x { display: flex; margin-left
 .more-sales > summary { list-style: none; cursor: pointer; padding: 11px 14px; border-top: 1px solid var(--line); color: var(--accent); font-size: 13.5px; text-align: center; }
 .more-sales > summary::-webkit-details-marker { display: none; }
 .more-sales[open] > summary { display: none; }
+
+/* SKU codes, and at most two fields side by side in any form */
+.sku { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: .9em; letter-spacing: .02em; color: var(--muted); }
+h1 .sku { font-size: 14px; font-weight: 500; margin-left: 6px; vertical-align: middle; }
+.form-row-3 { grid-template-columns: 1fr 1fr; }
+@media (max-width: 560px) { .form-row-3 { grid-template-columns: 1fr; } }

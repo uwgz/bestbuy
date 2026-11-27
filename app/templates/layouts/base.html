@@ -22,10 +22,8 @@
     try { var t = sessionStorage.getItem("theme"); if (t) document.documentElement.dataset.theme = t; } catch (e) {}
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/loader.css') }}">
 </head>
 <body{% if (giveaway_live or session.get('giveaway_test')) and not code %} data-giveaway="{{ url_for('main.giveaway_check') }}" data-csrf="{{ csrf_token() }}"{% endif %}>
-  {% include "partials/loader.html" %}
   {% set ep = request.endpoint %}
   {% set in_devices = request.blueprint == 'shop' and not code %}
   {% set in_photo = request.blueprint == 'studio' and not code %}
@@ -113,6 +111,5 @@
   {% endif %}
 
   <script src="{{ url_for('static', filename='js/site.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/loader.js') }}"></script>
 </body>
 </html>

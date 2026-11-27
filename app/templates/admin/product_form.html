@@ -3,16 +3,16 @@
 {% block content %}
 <a class="adm-back" href="{{ url_for('admin.products_list') }}">← Stock</a>
 <div class="adm-head">
-  <div><h1>{{ product.short if product else 'New product' }}</h1>
+  <div><h1>{{ product.short if product else 'New product' }}{% if product %} <span class="sku">{{ product.sku }}</span>{% endif %}</h1>
     {% if product %}<p class="muted"><a href="{{ url_for('shop.product', slug=product.slug) }}" target="_blank" rel="noopener">View in shop ↗</a></p>{% endif %}</div>
 </div>
 
 <form method="post" enctype="multipart/form-data" class="adm-form adm-form-grid" id="product-form">{{ csrf_field() }}
   <section class="card">
     <h2>Details</h2>
-    <label>Product name<input name="name" value="{{ form.get('name', '') }}" required maxlength="200" placeholder="e.g. Canon EOS R6 Mark III Body"></label>
+    <label>Product name <small>(up to 20 words, shown on the product page)</small><input name="name" value="{{ form.get('name', '') }}" required maxlength="160" placeholder="e.g. Canon EOS R6 Mark III Body" data-max-words="20"></label>
     <div class="form-row">
-      <label>Short name <small>(cards & home page)</small><input name="short_name" value="{{ form.get('short_name', '') }}" maxlength="80" placeholder="e.g. EOS R6 Mark III"></label>
+      <label>Short name <small>(up to 4 words; left empty = first 4 words of the name)</small><input name="short_name" value="{{ form.get('short_name', '') }}" maxlength="32" placeholder="e.g. EOS R6 Mark III" data-max-words="4"></label>
       <label>Category
         <select name="category" required>
           {% for slug, (label, _) in cats.items() %}<option value="{{ slug }}" {{ 'selected' if form.get('category') == slug }}>{{ label }}</option>{% endfor %}

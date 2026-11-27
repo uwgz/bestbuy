@@ -307,7 +307,17 @@ document.querySelectorAll(".gw-kind").forEach(set => {
     f.querySelector("[data-sale-product-id]").value = t.dataset.saleId;
     f.querySelector("[data-sale-unit]").value = t.dataset.salePrice;
     const n = Number(t.dataset.saleStock || 0);
-    f.querySelector("[data-sale-stock-note]").textContent = n ? ` · ${n} in stock` : " · none in stock";
+    const qty = f.querySelector("[data-sale-qty]");
+    qty.max = Math.max(n, 1);                       // can't sell more than is in stock
+    f.querySelector("[data-sale-stock-note]").textContent = n ? ` · ${n} in stock` : " · none in stock: refill first";
     update(f);
+  });
+  // a product's "Refill" button: send the form to that product
+  document.addEventListener("modal:open", e => {
+    const { form: f, trigger: t } = e.detail;
+    if (!t.dataset.refillUrl) return;
+    f.action = t.dataset.refillUrl;
+    const n = Number(t.dataset.saleStock || 0);
+    f.querySelector("[data-refill-note]").textContent = `${n} in stock now`;
   });
 })();

@@ -20,10 +20,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/loader.css') }}">
 </head>
 <body class="admin{{ ' signed-in' if g.user }}" data-upload-limit="{{ config.UPLOAD_REQUEST_LIMIT }}">
-  {% include "partials/loader.html" %}
   {% set ep = request.endpoint or '' %}
   {% if g.user %}
   {% set nav = [('admin.dashboard','Dashboard','home','admin.dashboard'),
@@ -113,6 +111,5 @@
   </dialog>
 
   <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
-  <script src="{{ url_for('static', filename='js/loader.js') }}"></script>
 </body>
 </html>

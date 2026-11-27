@@ -78,6 +78,19 @@ def _upgrade():
     if "stock_qty" not in _columns("products"):
         execute("ALTER TABLE products ADD COLUMN stock_qty INTEGER NOT NULL DEFAULT 0")
         execute("UPDATE products SET stock_qty = in_stock")      # in stock -> 1 unit, sold out -> 0
+    if "sku" not in _columns("products"):
+        execute("ALTER TABLE products ADD COLUMN sku TEXT NOT NULL DEFAULT ''")
+    sales_cols = _columns("sales")
+    for col in ("product_short", "sku"):
+        if col not in sales_cols:
+            execute(f"ALTER TABLE sales ADD COLUMN {col} TEXT NOT NULL DEFAULT ''")
+    from .models import products
+    products.fill_missing_skus()
+    execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_products_sku ON products (sku) WHERE sku <> ''")
+    # sales recorded before short names/SKUs were copied onto them
+    for r in query("SELECT s.id, p.sku, p.short_name, p.name FROM sales s JOIN products p ON p.id = s.product_id WHERE s.sku = ''"):
+        execute("UPDATE sales SET sku = ?, product_short = ? WHERE id = ?",
+                (r["sku"], r["short_name"] or products.auto_short(r["name"]), r["id"]))
 
 
 def postgres_schema(sql):

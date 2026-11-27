@@ -2,7 +2,7 @@
 import re
 from datetime import date, timedelta
 
-from ...models.products import CATEGORIES
+from ...models.products import CATEGORIES, NAME_WORDS, SHORT_WORDS, auto_short, words
 
 
 class FormError(ValueError):
@@ -48,15 +48,20 @@ def parse_date(text):
 
 
 def product_from_form(f):
-    name = f.get("name", "").strip()
+    name = " ".join(f.get("name", "").split())
     if not name:
         raise FormError("Give the product a name.")
+    if len(words(name)) > NAME_WORDS:
+        raise FormError(f"Keep the product name to {NAME_WORDS} words or fewer.")
+    short = " ".join(f.get("short_name", "").split()) or auto_short(name)
+    if len(words(short)) > SHORT_WORDS or len(short) > 32:
+        raise FormError(f"Keep the short name to {SHORT_WORDS} words (32 letters) or fewer.")
     category = f.get("category")
     if category not in CATEGORIES:
         raise FormError("Choose a category.")
     return {
         "name": name[:200],
-        "short_name": f.get("short_name", "").strip()[:80],
+        "short_name": short,
         "category": category,
         "description": f.get("description", "").strip()[:4000],
         "tagline": f.get("tagline", "").strip()[:200],

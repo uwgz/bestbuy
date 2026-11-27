@@ -23,6 +23,32 @@ EDITABLE = ("slug", "name", "short_name", "category", "description", "tagline", 
             "is_active", "position")
 
 
+SKU_CODES = {"phones": "PHN", "computers": "LAP", "tv": "TV", "audio": "AUD", "cameras": "CAM", "lenses": "LNS",
+             "gaming": "GAM", "wearables": "WCH", "accessories": "ACC"}
+SHORT_WORDS = 4      # short name: shown in lists, the cart and on cards
+NAME_WORDS = 20      # full name: shown on the product page
+
+
+def make_sku(product_id, category):
+    """'LAP-0007': category code + the product's number, so it is unique and never changes."""
+    return f"{SKU_CODES.get(category, 'PRD')}-{product_id:04d}"
+
+
+def words(text):
+    """Words in a name; a lone '-' or '|' between parts doesn't count."""
+    return [w for w in (text or "").split() if w.strip("-–—|/")]
+
+
+def auto_short(name):
+    """No short name given: the first few words of the full name."""
+    return " ".join(words(name)[:SHORT_WORDS])
+
+
+def fill_missing_skus():
+    for r in query("SELECT id, category FROM products WHERE sku = ''"):
+        execute("UPDATE products SET sku = ? WHERE id = ?", (make_sku(r["id"], r["category"]), r["id"]))
+
+
 def slugify(text):
     """'Canon RF 50mm f/1.8' -> 'canon-rf-50mm-f-1-8' (used in the product page address)."""
     text = (text or "").lower().replace("″", "").replace('"', "").replace("°", "")
@@ -51,7 +77,7 @@ def _decorate(row, imgs):
     on_sale = discount_active(row)
     final_cents = round(row["price_cents"] * (100 - row["discount_percent"]) / 100) if on_sale else row["price_cents"]
     p.update(
-        short=row["short_name"] or row["name"],
+        short=row["short_name"] or auto_short(row["name"]),
         price=final_cents / 100,
         original_price=row["price_cents"] / 100,
         price_cents_final=final_cents,
@@ -86,7 +112,7 @@ def list_products(active_only=True, category=None, search=None, sort=None, studi
     if category:
         sql.append("AND category = ?"); args.append(category)
     if search:
-        sql.append("AND (name LIKE ? OR description LIKE ?)"); args += [f"%{search}%"] * 2
+        sql.append("AND (name LIKE ? OR short_name LIKE ? OR sku LIKE ? OR description LIKE ?)"); args += [f"%{search}%"] * 4
     if studio_gear is not None:
         sql.append("AND studio_gear = ?"); args.append(1 if studio_gear else 0)
     if on_home:
@@ -134,7 +160,14 @@ def create(data):
     if "position" not in data:
         data["position"] = (query("SELECT COALESCE(MAX(position), 0) + 1 AS n FROM products", one=True)["n"])
     cols = ", ".join(data)
-    return execute(f"INSERT INTO products ({cols}) VALUES ({', '.join('?' * len(data))})", tuple(data.values()))
+    new_id = execute(f"INSERT INTO products ({cols}) VALUES ({', '.join('?' * len(data))})", tuple(data.values()))
+    execute("UPDATE products SET sku = ? WHERE id = ?", (make_sku(new_id, data["category"]), new_id))
+    return new_id
+
+
+def refill(product_id, qty):
+    """New units of a product arrived: add them to the stock (and it is no longer Sold out)."""
+    execute("UPDATE products SET stock_qty = stock_qty + ?, in_stock = 1, updated_at = ? WHERE id = ?", (qty, now_text(), product_id))
 
 
 def update(product_id, data):

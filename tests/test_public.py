@@ -143,10 +143,10 @@ def test_static_files_are_versioned_and_cached(client):
     assert r.status_code == 200 and "max-age=31536000" in r.headers.get("Cache-Control", "")
 
 
-def test_loader_on_every_page(client, owner):
+def test_no_loading_screen(client, owner):
     for page in (client.get("/"), client.get("/shop"), owner.get("/altar/")):
         html = page.get_data(as_text=True)
-        assert 'id="page-loader"' in html and 'class="loader-mark"' in html and "js/loader.js" in html
+        assert "page-loader" not in html and "loader.js" not in html and "loader.css" not in html
 
 
 def test_brand_files_exist(client):

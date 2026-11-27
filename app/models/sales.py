@@ -17,10 +17,15 @@ def record(product_id, qty, unit_cents, sold_on, note="", user_id=None):
     item = products.get(product_id, active_only=False)
     if not item:
         raise ValueError("That product no longer exists.")
+    if qty > item["stock_qty"]:
+        left = item["stock_qty"]
+        raise ValueError(f"Only {left} {item['short']} in stock. Refill it first." if left
+                         else f"{item['short']} is out of stock. Refill it first.")
     sale_id = execute(
-        "INSERT INTO sales (product_id, product_name, category, qty, unit_cents, total_cents, sold_on, note, created_by) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (item["id"], item["name"], item["category"], qty, unit_cents, qty * unit_cents, sold_on, note, user_id))
+        "INSERT INTO sales (product_id, product_name, product_short, sku, category, qty, unit_cents, total_cents, sold_on, note, created_by) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (item["id"], item["name"], item["short"], item["sku"], item["category"], qty, unit_cents, qty * unit_cents,
+         sold_on, note, user_id))
     # take the units off the stock (never below 0); 0 left = Sold out in the shop
     execute("UPDATE products SET in_stock = CASE WHEN stock_qty > ? THEN 1 ELSE 0 END, "
             "stock_qty = CASE WHEN stock_qty > ? THEN stock_qty - ? ELSE 0 END WHERE id = ?",
@@ -72,7 +77,7 @@ def period_summary(period=DEFAULT_PERIOD, today=None):
     args = (_since(period, today), today.isoformat())
     t = query("SELECT COUNT(*) AS n, COALESCE(SUM(qty), 0) AS units, COALESCE(SUM(total_cents), 0) AS cents "
               "FROM sales WHERE sold_on >= ? AND sold_on <= ?", args, one=True)
-    best = query("SELECT product_name, SUM(qty) AS units FROM sales WHERE sold_on >= ? AND sold_on <= ? "
+    best = query("SELECT product_name, MAX(product_short) AS short, SUM(qty) AS units FROM sales WHERE sold_on >= ? AND sold_on <= ? "
                  "GROUP BY product_name ORDER BY SUM(qty) DESC, SUM(total_cents) DESC LIMIT 1", args, one=True)
     value = _money(t["cents"])
     return {"label": PERIODS[period][0], "value": value, "units": t["units"], "sales": t["n"],

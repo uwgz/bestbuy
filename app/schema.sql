@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS products (
     home_position    INTEGER NOT NULL DEFAULT 0,      -- 0 = not on home page, 1 = first ...
     in_stock         INTEGER NOT NULL DEFAULT 1,      -- kept in step with stock_qty (0 units = Sold out)
     stock_qty        INTEGER NOT NULL DEFAULT 0,      -- units on hand; recorded sales take units off
+    sku              TEXT NOT NULL DEFAULT '',        -- e.g. LAP-0007, made by the site (unique)
     is_active        INTEGER NOT NULL DEFAULT 1,      -- hidden from the shop when 0
     position         INTEGER NOT NULL DEFAULT 0,
     created_at       TEXT NOT NULL DEFAULT (datetime('now')),
@@ -41,6 +42,8 @@ CREATE TABLE IF NOT EXISTS sales (
     id           INTEGER PRIMARY KEY AUTOINCREMENT,
     product_id   INTEGER REFERENCES products(id) ON DELETE SET NULL,
     product_name TEXT NOT NULL,
+    product_short TEXT NOT NULL DEFAULT '',
+    sku          TEXT NOT NULL DEFAULT '',
     category     TEXT NOT NULL DEFAULT '',
     qty          INTEGER NOT NULL CHECK (qty > 0),
     unit_cents   INTEGER NOT NULL CHECK (unit_cents >= 0),
