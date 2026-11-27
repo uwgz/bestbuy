@@ -236,13 +236,13 @@ class PortfolioItem(TimestampMixin, OrderedMixin, db.Model):
 
 
 class GearItem(TimestampMixin, OrderedMixin, db.Model):
-    """Photography gear shown on the Photography page, priced in US dollars."""
+    """Photography gear shown on the Photography page, priced in Canadian dollars."""
 
     __tablename__ = "gear_items"
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
-    price_usd = db.Column(db.Numeric(12, 2), nullable=False)
+    price_cad = db.Column(db.Numeric(12, 2), nullable=False)
     photo_links = db.Column(db.Text, nullable=False, default="")       # one link per line; the first is the cover
 
     @property

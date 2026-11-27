@@ -42,15 +42,15 @@
             <span class="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium text-white backdrop-blur">{{ icon("image", "size-3.5") }} {{ g.photos|length }}</span>
           </div>
           <div class="flex items-center gap-3 p-4">
-            <div class="min-w-0 flex-1"><h2 class="truncate text-[16px] font-semibold">{{ g.name }}</h2><p class="mt-0.5 font-semibold tabular-nums text-brand">{{ usd(g.price_usd) }}</p></div>
-            {% set data = {"id": g.id, "name": g.name, "price": ("%.2f"|format(g.price_usd))|replace(".00", ""), "photos": g.photos|join("\n")} %}
+            <div class="min-w-0 flex-1"><h2 class="truncate text-[16px] font-semibold">{{ g.name }}</h2><p class="mt-0.5 font-semibold tabular-nums text-brand">{{ cad(g.price_cad) }}</p></div>
+            {% set data = {"id": g.id, "name": g.name, "price": ("%.2f"|format(g.price_cad))|replace(".00", ""), "photos": g.photos|join("\n")} %}
             <button type="button" data-dialog="gear" data-row='{{ data|tojson|forceescape }}' class="{{ ib }}" aria-label="Edit {{ g.name }}" title="Edit">{{ icon("pencil", "size-4") }}</button>
             {{ remove("gear", g, g.name) }}
           </div>
         </article>
       {% endfor %}
     </div>
-  {% else %}{{ empty("camera", "No gear yet", "Add cameras, lenses and lights with their price in US dollars and photos.") }}{% endif %}
+  {% else %}{{ empty("camera", "No gear yet", "Add cameras, lenses and lights with their price in Canadian dollars and photos.") }}{% endif %}
 
 {% elif tab == "services" %}
   {% if rows.services %}
@@ -115,8 +115,8 @@
 
 {% call dialog("gear", "Add gear", "Add gear") %}
   <div class="grid grid-cols-[1fr_150px] gap-3">
-    <label class="{{ lbl }}">Name<input name="name" required maxlength="120" class="{{ fld }}" placeholder="Canon EOS R6 Mark II"></label>
-    <label class="{{ lbl }}">Price (USD)<input name="price" required inputmode="decimal" class="{{ fld }}" placeholder="1,999"></label>
+    <label class="{{ lbl }}">Name<input name="name" required maxlength="120" class="{{ fld }}" placeholder="Sony Alpha 7 IV (Body)"></label>
+    <label class="{{ lbl }}">Price (CAD)<input name="price" required inputmode="decimal" class="{{ fld }}" placeholder="3,199.99"></label>
   </div>
   <label class="{{ lbl }}">Photos <span class="font-normal text-zinc-400">(one link per line; the first is the cover)</span>
     <textarea name="photos" rows="4" required class="{{ fld }} font-mono text-[13px]" placeholder="https://images.unsplash.com/photo-…"></textarea></label>

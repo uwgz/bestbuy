@@ -7,7 +7,7 @@ from .extensions import db
 from datetime import date
 from decimal import Decimal
 
-from .models import Category, HeroSlide, PortfolioItem, Product, ProductPhoto, Service, Setting, StockMove
+from .models import Category, GearItem, HeroSlide, PortfolioItem, Product, ProductPhoto, Service, Setting, StockMove
 
 
 def unsplash(photo_id, width=1000):
@@ -212,6 +212,34 @@ HERO_SLIDES = [
 ]
 
 
+# Photography gear (Photography page). Prices in Canadian dollars: regular retail prices at
+# Canadian stores (Sony Canada, Nikon Canada, Fujifilm Canada, Best Buy Canada…), November 2026.
+GEAR = [
+    {"name": "Sony Alpha 7 IV (Body)", "price_cad": "3199.99",
+     "photos": ["1516035069371-29a1b244cc32", "1552233707-a3185320d9a0"]},
+    {"name": "Canon EOS R5 Mark II (Body)", "price_cad": "5899.00",
+     "photos": ["1500634245200-e5245c7574ef", "1502982720700-bfff97f2ecac"]},
+    {"name": "Nikon Z8 (Body)", "price_cad": "5399.95",
+     "photos": ["1614108830714-74f0e4c8cd7e", "1606986628470-26a67fa4730c", "1607462109225-6b64ae2dd3cb"]},
+    {"name": "Fujifilm X-T5 with XF 16-50mm Lens", "price_cad": "2840.00",
+     "photos": ["1749016888524-967635aa2c6f"]},
+    {"name": "Sony FE 24-70mm f/2.8 GM II Lens", "price_cad": "2999.99",
+     "photos": ["1580852300513-9b50125bf293", "1758109682731-79081e27e673", "1593704212686-6d52058fb516"]},
+    {"name": "DJI Mini 4 Pro Drone", "price_cad": "1059.99",
+     "photos": ["1507582020474-9a35b7d455d9", "1514598800938-f7125ea1aa1c", "1588495077262-e41593eb23c8"]},
+    {"name": "DJI RS 4 Combo Gimbal", "price_cad": "815.99",
+     "photos": ["1534961165765-5c9795af911b"]},
+    {"name": "Godox AD200 Pro II Pocket Flash", "price_cad": "349.99",
+     "photos": ["1711289469579-b01082b4e1db", "1701120285608-6a1655862b5a"]},
+]
+
+
+def gear_rows():
+    return [GearItem(name=g["name"], price_cad=Decimal(g["price_cad"]), position=pos, is_active=True,
+                     photo_links="\n".join(unsplash(p, 1000) for p in g["photos"]))
+            for pos, g in enumerate(GEAR)]
+
+
 def load_demo():
     """Fill each empty table with the starting content. Tables that already have rows are left alone."""
     added = []
@@ -241,6 +269,9 @@ def load_demo():
         for pos, s in enumerate(SERVICES):
             db.session.add(Service(position=pos, **s))
         added.append(f"{len(SERVICES)} services")
+    if not GearItem.query.first():
+        db.session.add_all(gear_rows())
+        added.append(f"{len(GEAR)} gear items")
     if not PortfolioItem.query.first():
         for pos, item in enumerate(PORTFOLIO):
             db.session.add(PortfolioItem(position=pos, **item))

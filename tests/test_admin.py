@@ -287,19 +287,30 @@ def test_photography_tabs(owner):
     assert "Portrait session" in owner.get("/admin/photography?tab=services").get_data(as_text=True)    # the services already there
 
 
+def test_starting_gear_is_added_once(owner, client):
+    from bestbuy import _add_starting_gear_once
+    page = client.get("/photography").get_data(as_text=True)
+    assert GearItem.query.count() == 8 and "Sony Alpha 7 IV (Body)" in page and "$3,199.99 CAD" in page
+    for g in GearItem.query.all():
+        post(owner, f"/admin/photography/gear/{g.id}/remove")
+    _add_starting_gear_once()                                                    # next start of the site
+    assert GearItem.query.count() == 0 and 'id="gear"' not in client.get("/photography").get_data(as_text=True)
+
+
 def test_gear_add_edit_remove(owner, client):
-    post(owner, "/admin/photography/gear/add", name="Canon EOS R6 Mark II", price="1,999", photos="")            # a photo is required
-    post(owner, "/admin/photography/gear/add", name="Canon EOS R6 Mark II", price="1,999",
+    post(owner, "/admin/photography/gear/add", name="Canon EOS R6 Mark II", price="3,499", photos="")            # a photo is required
+    post(owner, "/admin/photography/gear/add", name="Canon EOS R6 Mark II", price="3,499",
          photos="https://images.unsplash.com/photo-1\nhttps://images.unsplash.com/photo-2")
-    gear = GearItem.query.one()
-    assert gear.price_usd == 1999 and len(gear.photos) == 2
-    assert "$1,999" in client.get("/photography").get_data(as_text=True)
-    post(owner, f"/admin/photography/gear/{gear.id}/edit", name="Canon R6 II", price="1899.5", photos="https://images.unsplash.com/photo-3")
+    gear = GearItem.query.filter_by(name="Canon EOS R6 Mark II").one()
+    assert gear.price_cad == 3499 and len(gear.photos) == 2
+    assert "$3,499 CAD" in client.get("/photography").get_data(as_text=True)
+    post(owner, f"/admin/photography/gear/{gear.id}/edit", name="Canon R6 II", price="3299.5", photos="https://images.unsplash.com/photo-3")
     gear = db.session.get(GearItem, gear.id)
     assert gear.name == "Canon R6 II" and gear.photos == ["https://images.unsplash.com/photo-3"]
-    assert "$1,899.50" in client.get("/photography").get_data(as_text=True)
-    post(owner, f"/admin/photography/gear/{gear.id}/remove")
-    assert GearItem.query.count() == 0 and 'id="gear"' not in client.get("/photography").get_data(as_text=True)
+    assert "$3,299.50 CAD" in client.get("/photography").get_data(as_text=True)
+    gear_id = gear.id
+    post(owner, f"/admin/photography/gear/{gear_id}/remove")
+    assert db.session.get(GearItem, gear_id) is None
 
 
 def test_services_add_and_remove(owner, client):

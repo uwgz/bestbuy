@@ -42,7 +42,7 @@
 {% if gear %}
 <section id="gear" class="wrap mt-16 scroll-mt-24">
   <h2 class="text-2xl sm:text-3xl">Gear</h2>
-  <p class="mt-1 text-[17px] text-[#6e6e73] dark:text-[#a1a1a6]">Cameras, lenses and lights we have. Prices in US dollars.</p>
+  <p class="mt-1 text-[17px] text-[#6e6e73] dark:text-[#a1a1a6]">Cameras, lenses and lights we have. Prices in Canadian dollars.</p>
   <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
     {% for g in gear %}
       <article class="flex flex-col overflow-hidden rounded-3xl border border-zinc-200 dark:border-zinc-800" data-gear>
@@ -59,8 +59,8 @@
           </div>
         {% endif %}
         <div class="flex flex-1 items-end justify-between gap-3 p-5">
-          <div class="min-w-0"><h3 class="text-lg leading-snug">{{ g.name }}</h3><p class="mt-1 text-xl font-semibold tabular-nums">{{ usd(g.price_usd) }}</p></div>
-          <a href="{{ whatsapp_link('Hello ' ~ store.name ~ '! I\'m interested in ' ~ g.name ~ ' (' ~ usd(g.price_usd) ~ ').') }}" target="_blank" rel="noopener" class="btn-outline shrink-0 py-2 text-sm">Ask</a>
+          <div class="min-w-0"><h3 class="text-lg leading-snug">{{ g.name }}</h3><p class="mt-1 text-xl font-semibold tabular-nums">{{ cad(g.price_cad) }}</p></div>
+          <a href="{{ whatsapp_link('Hello ' ~ store.name ~ '! I\'m interested in ' ~ g.name ~ ' (' ~ cad(g.price_cad) ~ ').') }}" target="_blank" rel="noopener" class="btn-outline shrink-0 py-2 text-sm">Ask</a>
         </div>
       </article>
     {% endfor %}

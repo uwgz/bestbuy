@@ -20,9 +20,9 @@ def money(value):
     return f'{store["currency"]} {value:,.{store["decimals"]}f}'
 
 
-def usd(value):
-    """Gear prices: $1,250 or $1,250.50"""
-    return f"${value:,.2f}".replace(".00", "")
+def cad(value):
+    """Gear prices, in Canadian dollars: $1,250 CAD or $1,250.50 CAD"""
+    return f"${value:,.2f}".replace(".00", "") + " CAD"
 
 
 def overview(text):
@@ -105,7 +105,7 @@ def init_app(app):
 
     @app.context_processor
     def _globals():
-        return {"store": Setting.store(), "categories": Category.as_dict(), "icon": icon, "money": money, "usd": usd,
+        return {"store": Setting.store(), "categories": Category.as_dict(), "icon": icon, "money": money, "cad": cad,
                 "whatsapp_link": whatsapp_link, "nav_section": _section(request.endpoint), "giveaway_on": giveaway_on}
 
     @app.route("/giveaway/draw", methods=["POST"])

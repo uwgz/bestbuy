@@ -1,7 +1,7 @@
 """
 Photography (/admin/photography): what the public Photography page shows, in three tabs.
 
-    Gear        name, price in US dollars, photos
+    Gear        name, price in Canadian dollars, photos
     Services    the studio's services (name, "from" price, duration, icon, photo, description)
     Portfolio   photos, each with the Instagram account of the person in it
 Each tab has + Add, and every item can be removed (gear and services can also be edited).
@@ -41,7 +41,7 @@ def _gear(f):
     photos = [_photo(line, "Photos") for line in (f.get("photos") or "").splitlines() if line.strip()]
     if not photos:
         raise FormError("Add at least one photo link.")
-    return {"name": text(f, "name", "the name", limit=120), "price_usd": amount(f.get("price"), "Price (USD)"),
+    return {"name": text(f, "name", "the name", limit=120), "price_cad": amount(f.get("price"), "Price (CAD)"),
             "photo_links": "\n".join(photos)}
 
 

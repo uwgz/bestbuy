@@ -31,10 +31,12 @@ def create_app(overrides=None):
         from . import models  # noqa: F401  (registers the tables)
         _move_old_site_tables()
         db.create_all()                      # makes any missing tables; never changes existing ones
+        _rename_columns()
         _add_new_columns()
         _update_checks()
         if app.config.get("AUTO_LOAD_DEMO"):
             _load_demo_if_empty()
+            _add_starting_gear_once()
     return app
 
 
@@ -75,6 +77,24 @@ NEW_COLUMNS = [
 ]
 
 
+# Columns renamed after their table was made: (table, old name, new name)
+RENAMED_COLUMNS = [("gear_items", "price_usd", "price_cad")]
+
+
+def _rename_columns():
+    from sqlalchemy import inspect, text
+    inspector = inspect(db.engine)
+    for table, old, new in RENAMED_COLUMNS:
+        if table in inspector.get_table_names():
+            names = {c["name"] for c in inspector.get_columns(table)}
+            if old in names and new not in names:
+                try:
+                    with db.engine.begin() as conn:
+                        conn.execute(text(f"ALTER TABLE {table} RENAME COLUMN {old} TO {new}"))
+                except Exception:        # another server renamed it at the same moment
+                    pass
+
+
 def _add_new_columns():
     """create_all() never changes a table that exists, so add new columns to existing tables here."""
     from sqlalchemy import inspect, text
@@ -108,6 +128,24 @@ def _update_checks():
                     conn.execute(text(f"ALTER TABLE {table} ADD CONSTRAINT {name} CHECK ({rule})"))
         except Exception:                # another server changed it at the same moment
             pass
+
+
+def _add_starting_gear_once():
+    """The Gear list came after the site went live: add the starting gear one time.
+    A setting remembers it, so gear you remove later never comes back."""
+    from sqlalchemy.exc import IntegrityError
+    from .models import GearItem, Setting
+    from .seed import GEAR, gear_rows
+    if db.session.get(Setting, "gear_seeded"):
+        return
+    try:
+        if not GearItem.query.first():
+            db.session.add_all(gear_rows())
+            print(f"Added {len(GEAR)} starting gear items.")
+        db.session.add(Setting(key="gear_seeded", value="1"))
+        db.session.commit()
+    except IntegrityError:               # another server did it at the same moment
+        db.session.rollback()
 
 
 def _load_demo_if_empty():
