@@ -48,12 +48,12 @@
     </nav>
   </header>
 
-  {# phones: day/night tab in the right edge of the screen. It slides out, waits a few seconds, and slides back
-     into the edge, leaving a small handle; tap the handle to bring it out, tap it again to switch. #}
+  {# phones: day/night tab in the right edge of the screen. Every so often it slides out, waits a few seconds and
+     slides back into the edge, leaving a handle. Touch the handle (any time) to bring it out; touch it again to switch. #}
   <button type="button" data-theme-tab aria-label="Switch day / night"
-          class="group fixed right-0 top-1/2 z-30 -translate-y-1/2 pl-4 transition-[translate] duration-700 ease-[cubic-bezier(.34,1.56,.64,1)] translate-x-[calc(100%-26px)] data-out:translate-x-0 motion-reduce:transition-none sm:hidden">
+          class="group fixed right-0 top-1/2 z-30 -translate-y-1/2 py-4 pl-6 transition-[translate] duration-700 ease-[cubic-bezier(.34,1.56,.64,1)] translate-x-[calc(100%-38px)] data-out:translate-x-0 motion-reduce:transition-none sm:hidden">
     <span class="relative flex h-[60px] w-[58px] items-center justify-center rounded-l-[22px] border border-r-0 border-zinc-200/80 bg-white/80 shadow-[-8px_10px_30px_-10px_rgba(0,0,0,.35)] backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/80 dark:shadow-[-8px_10px_30px_-8px_rgba(0,0,0,.9)]">
-      <span class="absolute left-[4px] h-7 w-[3px] rounded-full bg-zinc-400/70 transition-opacity duration-500 group-data-out:opacity-0 dark:bg-zinc-500/80"></span>
+      <span class="absolute left-[5px] h-8 w-1 rounded-full bg-zinc-400/80 transition-opacity duration-500 group-data-out:opacity-0 dark:bg-zinc-500/80"></span>
       <span class="grid size-10 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-700 text-white shadow-lg shadow-violet-600/40 transition duration-700 ease-[cubic-bezier(.34,1.56,.64,1)] -rotate-[120deg] scale-50 opacity-0 group-data-out:rotate-0 group-data-out:scale-100 group-data-out:opacity-100 dark:from-amber-300 dark:to-orange-500 dark:shadow-orange-500/40" data-theme-tab-icon>
         <span class="dark:hidden">{{ icon("moon", "size-5") }}</span><span class="hidden dark:inline">{{ icon("sun", "size-5") }}</span>
       </span>
@@ -101,12 +101,14 @@
     </div>
     <div class="wrap mt-10 flex flex-col items-center justify-between gap-3 border-t border-zinc-200 pt-6 text-xs sm:flex-row dark:border-zinc-800">
       <p>© <span data-year>2026</span> {{ store.name }}. All rights reserved.</p>
-      <div class="flex items-center gap-5">
-        <button type="button" data-theme-toggle class="inline-flex items-center gap-1.5 hover:text-zinc-900 sm:hidden dark:hover:text-white">
-          <span class="dark:hidden">{{ icon("moon", "size-4") }} Night mode</span><span class="hidden dark:inline-flex dark:items-center dark:gap-1.5">{{ icon("sun", "size-4") }} Day mode</span>
+      <div class="flex flex-nowrap items-center gap-6 whitespace-nowrap font-semibold uppercase tracking-wider">
+        {# phones: icon and words on one line, like ADMIN #}
+        <button type="button" data-theme-toggle class="inline-flex items-center gap-1.5 uppercase tracking-wider hover:text-zinc-900 sm:hidden dark:hover:text-white">
+          <span class="inline-flex items-center gap-1.5 dark:hidden">{{ icon("moon", "size-4 shrink-0") }}Night mode</span>
+          <span class="hidden items-center gap-1.5 dark:inline-flex">{{ icon("sun", "size-4 shrink-0") }}Day mode</span>
         </button>
         {# signed out: the sign-in page; signed in: straight to the dashboard #}
-        <a href="{{ url_for('admin.dashboard') }}" rel="nofollow" class="inline-flex items-center gap-1.5 font-semibold tracking-wider hover:text-zinc-900 dark:hover:text-white">{{ icon("shield", "size-3.5") }}ADMIN</a>
+        <a href="{{ url_for('admin.dashboard') }}" rel="nofollow" class="inline-flex items-center gap-1.5 hover:text-zinc-900 dark:hover:text-white">{{ icon("shield", "size-4 shrink-0") }}Admin</a>
       </div>
     </div>
   </footer>

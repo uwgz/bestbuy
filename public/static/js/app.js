@@ -27,23 +27,28 @@
     try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch (e) {}
   }));
 
-  // phones: the day/night tab peeks out of the right edge, then slides back in
+  // phones: the day/night tab comes out of the right edge and goes back in, again and again.
+  // Touching the handle brings it out at once; touching it when it's out switches day / night.
   const tab = $("[data-theme-tab]");
   if (tab) {
-    let timer;
-    const out = ms => { tab.toggleAttribute("data-out", true); clearTimeout(timer); timer = setTimeout(() => tab.removeAttribute("data-out"), ms); };
+    let hide, cycle;
+    const isOut = () => tab.hasAttribute("data-out");
+    const out = ms => {
+      tab.setAttribute("data-out", "");
+      clearTimeout(hide); hide = setTimeout(() => tab.removeAttribute("data-out"), ms);
+    };
+    const every = () => { clearInterval(cycle); cycle = setInterval(() => { if (!isOut() && !document.hidden) out(3500); }, 20000); };
     tab.addEventListener("click", () => {
-      if (!tab.hasAttribute("data-out")) return out(4000);             // the handle: come out
+      every();                                                          // touched: start the 20 s wait again
+      if (!isOut()) return out(5000);                                   // the handle: come out now
       const dark = document.documentElement.classList.toggle("dark");  // out: switch day / night
       try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch (e) {}
-      const icon = $("[data-theme-tab-icon]", tab);
-      icon.animate([{ transform: "rotate(-90deg) scale(.6)" }, { transform: "rotate(0) scale(1)" }], { duration: 500, easing: "cubic-bezier(.34,1.56,.64,1)" });
-      out(2500);
+      $("[data-theme-tab-icon]", tab).animate([{ transform: "rotate(-90deg) scale(.6)" }, { transform: "rotate(0) scale(1)" }],
+        { duration: 500, easing: "cubic-bezier(.34,1.56,.64,1)" });
+      out(3000);
     });
-    // show it once per visit, shortly after the first page opens
-    let shown = false;
-    try { shown = sessionStorage.getItem("theme-tab") === "1"; sessionStorage.setItem("theme-tab", "1"); } catch (e) {}
-    if (!shown) setTimeout(() => out(3500), 1200);
+    setTimeout(() => out(3500), 1200);                                  // first time: shortly after the page opens
+    every();                                                            // then every 20 seconds
   }
 
   // ---------- cart (slug -> quantity) ----------
