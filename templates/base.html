@@ -32,7 +32,7 @@
         <span class="block h-8 w-[30px] [&_svg]:h-full [&_svg]:w-full">{% include "partials/logo_anim.svg" %}</span>
         <span class="hidden md:inline">{{ store.name }}</span>
       </a>
-      <div class="flex items-center gap-6 font-mono text-[13px] uppercase tracking-[0.28em] sm:gap-10 sm:text-sm">
+      <div class="flex items-center gap-5 font-display text-[15px] font-semibold tracking-[-0.01em] sm:gap-9 sm:text-[17px]">
         <a href="{{ url_for('shop') }}" class="py-2 transition {{ 'text-zinc-900 dark:text-white' if nav_section != 'photo' else 'text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-white' }}"{{ ' aria-current="page"' if nav_section == 'devices' }}>Devices</a>
         <a href="{{ url_for('studio') }}" class="py-2 transition {{ 'text-zinc-900 dark:text-white' if nav_section != 'devices' else 'text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-white' }}"{{ ' aria-current="page"' if nav_section == 'photo' }}>Photography</a>
       </div>

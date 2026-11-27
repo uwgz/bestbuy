@@ -644,6 +644,9 @@
   .gap-4 {
     gap: calc(var(--spacing) * 4);
   }
+  .gap-5 {
+    gap: calc(var(--spacing) * 5);
+  }
   .gap-6 {
     gap: calc(var(--spacing) * 6);
   }
@@ -1061,6 +1064,10 @@
     --tw-font-weight: var(--font-weight-semibold);
     font-weight: var(--font-weight-semibold);
   }
+  .tracking-\[-0\.01em\] {
+    --tw-tracking: -0.01em;
+    letter-spacing: -0.01em;
+  }
   .tracking-\[-0\.02em\] {
     --tw-tracking: -0.02em;
     letter-spacing: -0.02em;
@@ -1068,10 +1075,6 @@
   .tracking-\[0\.3em\] {
     --tw-tracking: 0.3em;
     letter-spacing: 0.3em;
-  }
-  .tracking-\[0\.28em\] {
-    --tw-tracking: 0.28em;
-    letter-spacing: 0.28em;
   }
   .tracking-tight {
     --tw-tracking: var(--tracking-tight);
@@ -1322,8 +1325,8 @@
     .sm\:gap-3\.5 {
       gap: calc(var(--spacing) * 3.5);
     }
-    .sm\:gap-10 {
-      gap: calc(var(--spacing) * 10);
+    .sm\:gap-9 {
+      gap: calc(var(--spacing) * 9);
     }
     .sm\:p-6 {
       padding: calc(var(--spacing) * 6);
@@ -1372,10 +1375,6 @@
     .sm\:text-5xl {
       font-size: var(--text-5xl);
       line-height: var(--tw-leading, var(--text-5xl--line-height));
-    }
-    .sm\:text-sm {
-      font-size: var(--text-sm);
-      line-height: var(--tw-leading, var(--text-sm--line-height));
     }
     .sm\:text-\[17px\] {
       font-size: 17px;
