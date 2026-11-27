@@ -192,33 +192,19 @@
   if (!modal) return;
   const body = modal.querySelector(".modal-body"), title = modal.querySelector("#modal-title");
 
-  async function openModal(trigger) {
+  function openModal(trigger) {
     const target = trigger.dataset.modal;
     title.textContent = trigger.dataset.modalTitle || trigger.textContent.replace("+", "").trim();
-    body.innerHTML = '<p class="muted modal-loading">Loading…</p>';
+    const tpl = document.querySelector(target);
+    if (!tpl) return;
+    const form = (tpl.content || tpl).firstElementChild.cloneNode(true);
+    form.querySelectorAll(".save-bar a.btn-outline").forEach(a => {   // "Cancel" closes the pop-up
+      const b = document.createElement("button");
+      b.type = "button"; b.className = a.className; b.textContent = a.textContent; b.dataset.modalClose = "";
+      a.replaceWith(b);
+    });
     modal.showModal();
     document.body.classList.add("modal-open");
-    let form;
-    if (target && target.startsWith("#")) {
-      const tpl = document.querySelector(target);
-      form = tpl.content ? tpl.content.firstElementChild.cloneNode(true) : tpl.firstElementChild.cloneNode(true);
-    } else {
-      try {
-        const res = await fetch(trigger.href, { credentials: "same-origin" });
-        const doc = new DOMParser().parseFromString(await res.text(), "text/html");
-        form = doc.querySelector("form.adm-form");
-        if (!form) throw new Error("no form");
-        form.action = trigger.href;
-        form.querySelectorAll(".save-bar a.btn-outline").forEach(a => {   // "Cancel" closes the pop-up
-          const b = document.createElement("button");
-          b.type = "button"; b.className = a.className; b.textContent = a.textContent; b.dataset.modalClose = "";
-          a.replaceWith(b);
-        });
-      } catch (e) {
-        window.location = trigger.href;   // fall back to the full page
-        return;
-      }
-    }
     // after saving, come back to this page
     const back = document.createElement("input");
     back.type = "hidden"; back.name = "_back"; back.value = location.pathname + location.search;

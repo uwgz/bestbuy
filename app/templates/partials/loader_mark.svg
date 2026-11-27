@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="1 2 62 62" class="loader-mark" aria-hidden="true">
-<path d="M24 21v-3a8 8 0 0 1 16 0v3" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round"/>
-<path d="M9 21h46l-3.1 33.3A4 4 0 0 1 47.9 58H16.1a4 4 0 0 1-4-3.7ZM21 40a11 11 0 1 0 22 0a11 11 0 1 0 -22 0ZM25.8 40a6.2 6.2 0 1 0 12.4 0a6.2 6.2 0 1 0 -12.4 0Z" fill="currentColor" fill-rule="evenodd"/>
-<circle cx="32" cy="40" r="2.7" fill="#ff3b30" class="rec-dot"><animate attributeName="opacity" dur="2.4s" repeatCount="indefinite" keyTimes="0;.45;.55;.9;1" values="1;1;.15;.15;1"/></circle>
-</svg>

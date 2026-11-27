@@ -275,7 +275,7 @@ def product_photo(product_id, image_id, action):
 @login_required
 def services_list():
     return render_template("admin/services.html", items=services.list_services(active_only=False),
-                           gear_items=gear.list_gear(active_only=False))
+                           gear_items=gear.list_gear(active_only=False), icons=services.ICONS)
 
 
 # ---------- Studio gear (equipment the studio uses — not for sale) ----------

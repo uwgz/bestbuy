@@ -171,3 +171,11 @@ def test_old_products_and_sales_get_skus(tmp_path, backend, request):
         p = query("SELECT sku FROM products WHERE id = ?", (pid,), one=True)
         s = query("SELECT sku, product_short FROM sales", one=True)
     assert p["sku"] == f"AUD-{pid:04d}" and s["sku"] == p["sku"] and s["product_short"] == "Old Speaker Thing Big"
+
+
+def test_stock_page_title_is_clean_and_popups_are_in_the_page(owner):
+    html = owner.get("/altar/products").get_data(as_text=True)
+    title = html.split("<title>")[1].split("</title>")[0]
+    assert "<" not in title and title.startswith("Stock")
+    body = html.split("<body", 1)[1]
+    assert 'id="refill-one"' in body and 'id="sell-one"' in body

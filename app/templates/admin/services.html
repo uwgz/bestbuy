@@ -3,7 +3,7 @@
 {% block content %}
 <div class="adm-head">
   <div><h1>Studio</h1><p class="muted">What appears on the Photography page and in the booking form.</p></div>
-  <a class="btn" href="{{ url_for('admin.service_edit') }}" data-modal data-modal-title="Add a service">+ Add service</a>
+  <button class="btn" type="button" data-modal="#add-service" data-modal-title="Add a service">+ Add service</button>
 </div>
 <div class="list">
   {% for s in items %}
@@ -18,7 +18,7 @@
 
 <div class="adm-head" id="gear" style="margin-top: 28px">
   <div><h2 style="margin:0">Studio gear</h2><p class="muted">Cameras, lenses and tools you use for photo and video work. Shown on the Photography page — not for sale.</p></div>
-  <a class="btn" href="{{ url_for('admin.service_gear_edit') }}" data-modal data-modal-title="Add studio gear">+ Add gear</a>
+  <button class="btn" type="button" data-modal="#add-gear" data-modal-title="Add studio gear">+ Add gear</button>
 </div>
 <div class="list">
   {% for g in gear_items %}
@@ -32,4 +32,11 @@
     <div class="empty">No gear yet. Add the equipment you use in the studio.</div>
   {% endfor %}
 </div>
+{# "+ Add" pop-ups: the forms are already in the page, so they open at once #}
+<template id="add-service">
+{% with service=None, form={"is_active": 1, "position": items|length + 1} %}{% include "admin/partials/service_form_main.html" %}{% endwith %}
+</template>
+<template id="add-gear">
+{% with item=None, form={"is_active": 1, "position": gear_items|length + 1} %}{% include "admin/partials/gear_form_main.html" %}{% endwith %}
+</template>
 {% endblock %}

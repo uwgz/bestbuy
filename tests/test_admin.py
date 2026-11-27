@@ -255,3 +255,11 @@ def test_service_without_amount(owner):
     owner.post("/altar/services/portrait-sessions", data={"name": "Portrait Sessions", "price_prefix": "Ask for a quote",
                "price_amount": "", "icon": "user", "position": "1", "is_active": "1"})
     assert b"Ask for a quote" in owner.get("/photography").data
+
+
+def test_add_popups_are_in_the_page(owner):
+    """'+ Add' pop-ups open from a form already in the page: no download, no 'Loading…'."""
+    for url, tpl in (("/altar/products", "add-product"), ("/altar/services", "add-service"), ("/altar/services", "add-gear")):
+        html = owner.get(url).get_data(as_text=True)
+        assert f'<template id="{tpl}">' in html and f'data-modal="#{tpl}"' in html
+        assert 'data-modal data-modal-title' not in html

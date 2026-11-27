@@ -1,17 +1,9 @@
 {% extends "admin/base.html" %}
-{% block title %}Stock{# opened by a product's "Refill" button: new units of the same product arrived #}
-<template id="refill-one">
-  <form method="post" class="adm-form" data-refill-form>{{ csrf_field() }}
-    <label>How many arrived<input type="number" name="qty" value="1" min="1" max="100000" inputmode="numeric" required></label>
-    <p class="sale-total" data-refill-note></p>
-    <div class="save-bar"><button class="btn" type="submit">Add to stock</button><button class="btn btn-outline" type="button" data-modal-close>Cancel</button></div>
-  </form>
-</template>
-{% endblock %}
+{% block title %}Stock{% endblock %}
 {% block content %}
 <div class="adm-head">
   <div><h1>Stock</h1><p class="muted">Your products, what's on the shelves and what has sold.</p></div>
-  <a class="btn" href="{{ url_for('admin.product_new') }}" data-modal data-modal-title="Add a product">+ Add product</a>
+  <button class="btn" type="button" data-modal="#add-product" data-modal-title="Add a product">+ Add product</button>
 </div>
 
 {# what is on the shelves right now #}
@@ -114,5 +106,18 @@
     <p class="sale-total" data-sale-total aria-live="polite">Total <b>—</b><span class="sale-stock" data-sale-stock-note></span></p>
     <div class="save-bar"><button class="btn" type="submit">Record sale</button><button class="btn btn-outline" type="button" data-modal-close>Cancel</button></div>
   </form>
+</template>
+
+{# opened by a product's "Refill" button: new units of the same product arrived #}
+<template id="refill-one">
+  <form method="post" class="adm-form" data-refill-form>{{ csrf_field() }}
+    <label>How many arrived<input type="number" name="qty" value="1" min="1" max="100000" inputmode="numeric" required></label>
+    <p class="sale-total" data-refill-note></p>
+    <div class="save-bar"><button class="btn" type="submit">Add to stock</button><button class="btn btn-outline" type="button" data-modal-close>Cancel</button></div>
+  </form>
+</template>
+{# "+ Add product" pop-up: the form is already in the page, so it opens at once #}
+<template id="add-product">
+{% with product=None, form={"is_active": 1, "in_stock": 1, "stock_qty": 1, "discount_percent": 0} %}{% include "admin/partials/product_form_main.html" %}{% endwith %}
 </template>
 {% endblock %}
