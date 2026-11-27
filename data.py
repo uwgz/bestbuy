@@ -209,4 +209,30 @@ PORTFOLIO = [
     {"photo": unsplash("1654765437547-6b572f52ee1a", 900), "title": "Evening dress", "instagram": INSTAGRAM},
 ]
 
-# The home page photo is public/static/img/hero/desk-electronics.jpg: replace that file to change it.
+# ---------------------------------------------------------------- home page slideshow
+# Each slide: a wide photo, a button and one line of text. They change every few seconds.
+# link: a page on this site ("/shop?category=phones") or "whatsapp" to open a booking chat.
+def wide(photo_id, focus="entropy"):
+    """A wide crop of an Unsplash photo; focus="faces" keeps people's faces in the picture."""
+    return f"https://images.unsplash.com/photo-{photo_id}?auto=format&fit=crop&crop={focus}&w=1800&h=900&q=80"
+
+
+SLIDE_SECONDS = 6
+HERO_SLIDES = [
+    {"photo": wide("1496181133206-80ce9b88a853"), "label": "Laptops", "text": "Work, study and create anywhere.",
+     "button": "Shop now", "link": "/shop?category=computers"},
+    {"photo": wide("1757710436034-f1d7372ec1be"), "label": "Phones", "text": "The new iPhone 17 Pro is here.",
+     "button": "Shop now", "link": "/shop?category=phones"},
+    {"photo": wide("1627161683077-e34782c24d81", "faces"), "label": "Photography", "text": "Studio portraits that look like you.",
+     "button": "Book now", "link": "whatsapp"},
+    {"photo": wide("1516035069371-29a1b244cc32"), "label": "Cameras", "text": "The gear our photographers trust.",
+     "button": "Shop now", "link": "/shop?category=cameras"},
+    {"photo": wide("1505740420928-5e560c06d30e"), "label": "Audio", "text": "Hear every detail.",
+     "button": "Shop now", "link": "/shop?category=audio"},
+    {"photo": wide("1608009232260-9b527a5bb9bd", "faces"), "label": "Weddings", "text": "Your day, beautifully remembered.",
+     "button": "Book now", "link": "whatsapp"},
+    {"photo": wide("1612287230202-1ff1d85d1bdf"), "label": "Gaming", "text": "Play the way you like.",
+     "button": "Shop now", "link": "/shop?category=gaming"},
+    {"photo": wide("1560169897-fc0cdbdfa4d5"), "label": "TV & Home Theater", "text": "Bring the cinema home.",
+     "button": "Shop now", "link": "/shop?category=tv"},
+]

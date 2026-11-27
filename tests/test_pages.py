@@ -84,3 +84,11 @@ def test_studio_cards_have_photos_and_portfolio_has_instagram(client):
         assert s["photo"].replace("&", "&amp;") in html
     assert html.count('aria-label="See on Instagram"') == len(data.PORTFOLIO)
     assert 'href="https://www.instagram.com/"' in html
+
+
+def test_home_slideshow(client):
+    html = client.get("/").get_data(as_text=True)
+    n = len(data.HERO_SLIDES)
+    assert html.count("data-slide ") == n and html.count("data-slide data-current") == 1
+    assert html.count("data-slide-dot=") == n and f'data-seconds="{data.SLIDE_SECONDS}"' in html
+    assert "Shop now" in html and "Book now" in html and "https://wa.me/" in html

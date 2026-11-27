@@ -30,3 +30,6 @@
 
 /* the red dot in the logo blinks like a camera's recording light */
 @media (prefers-reduced-motion: reduce) { .rec-dot animate { display: none; } }
+
+/* home slideshow: the active dot fills up while its photo is showing */
+@keyframes slide-fill { from { width: 0; } to { width: 100%; } }

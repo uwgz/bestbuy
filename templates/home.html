@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
-{# hero: the earlier design, a full-width light panel, centred text, the photo rising from the bottom #}
-<section class="flex flex-col items-center overflow-hidden bg-[#f5f5f7] pt-14 text-center dark:bg-[#161617]">
+{# hero: the earlier design, a full-width light panel with centred text, then the slideshow #}
+<section class="flex flex-col items-center overflow-hidden bg-[#f5f5f7] pt-12 text-center lg:pt-10 dark:bg-[#161617]">
   <div class="max-w-3xl px-6">
     <h1 class="text-[clamp(2.4rem,9vw,4.5rem)] leading-[1.07] tracking-[-0.02em]">Tech you'll love.<br>Photos you'll keep.</h1>
     <p class="mx-auto mt-2 max-w-2xl text-[clamp(1.1rem,3.4vw,1.75rem)] leading-tight text-[#6e6e73] dark:text-[#a1a1a6]">Phones, laptops, TVs, audio and cameras, plus a professional photography studio, all in one shop.</p>
@@ -10,9 +10,29 @@
       <a href="{{ url_for('studio') }}" class="btn-outline border-brand text-brand hover:border-brand hover:bg-brand hover:text-white dark:border-brand dark:text-[#2997ff] dark:hover:text-white">Book a session</a>
     </div>
   </div>
-  <div class="mt-9 w-full px-4">
-    <img src="{{ url_for('static', filename='img/hero/desk-electronics.jpg') }}" alt="Laptop, tablet, VR headset and smartwatch on a desk" fetchpriority="high"
-         class="mx-auto block w-full max-w-[880px] rounded-t-[22px]">
+  {# slideshow: devices and photography; the filling dot shows when the next photo comes #}
+  <div data-slides data-seconds="{{ slide_seconds }}" class="mt-8 w-full pb-6" aria-roledescription="carousel" aria-label="What we do">
+    <div data-slide-track class="flex snap-x snap-mandatory gap-3 overflow-x-auto px-[5%] [scrollbar-width:none] sm:gap-5 sm:px-[7%] [&::-webkit-scrollbar]:hidden">
+      {% for s in slides %}
+        <div data-slide{{ ' data-current' if loop.first }} class="group relative aspect-[4/5] w-full max-w-[1400px] shrink-0 snap-center overflow-hidden rounded-[22px] bg-zinc-300 opacity-40 transition-opacity duration-700 data-current:opacity-100 sm:aspect-[2/1] lg:aspect-auto lg:h-[clamp(380px,calc(100dvh-31rem),620px)] dark:bg-zinc-800"
+             aria-roledescription="slide" aria-label="{{ loop.index }} of {{ loop.length }}: {{ s.label }}">
+          <img src="{{ s.photo }}" alt="" class="absolute inset-0 size-full scale-[1.06] object-cover transition-transform duration-[7000ms] ease-out group-data-current:scale-100 motion-reduce:transition-none"{{ ' fetchpriority="high"' if loop.first else ' loading="lazy"' }}>
+          <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/60 to-transparent"></div>
+          <div class="absolute inset-x-0 bottom-0 flex translate-y-2 flex-wrap items-center gap-x-5 gap-y-3 p-5 text-left opacity-0 transition duration-700 group-data-current:translate-y-0 group-data-current:opacity-100 sm:p-10">
+            <a href="{{ s.href }}" class="rounded-full bg-white/95 px-5 py-2.5 text-[15px] font-medium text-zinc-900 transition hover:bg-white sm:px-6 sm:py-3 sm:text-[17px]"{{ ' target="_blank" rel="noopener"' if s.external }}>{{ s.button }}</a>
+            <p class="text-[15px] text-white [text-shadow:0_1px_8px_rgb(0_0_0/.45)] sm:text-[19px]"><strong class="font-semibold">{{ s.label }}</strong> <span class="opacity-80">•</span> {{ s.text }}</p>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="mt-5 flex items-center justify-center gap-2.5" role="tablist" aria-label="Choose a slide">
+      {% for s in slides %}
+        <button type="button" data-slide-dot="{{ loop.index0 }}" role="tab" aria-label="Show {{ s.label }}"{{ ' data-active' if loop.first }}
+                class="group relative h-2 w-2 overflow-hidden rounded-full bg-zinc-400 transition-all duration-300 data-active:w-9 data-active:bg-zinc-300 dark:bg-zinc-600 dark:data-active:bg-zinc-700">
+          <span data-fill class="absolute inset-y-0 left-0 hidden w-0 rounded-full bg-zinc-900 group-data-active:block dark:bg-white"></span>
+        </button>
+      {% endfor %}
+    </div>
   </div>
 </section>
 

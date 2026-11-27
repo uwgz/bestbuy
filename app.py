@@ -97,7 +97,11 @@ app.jinja_env.filters["overview"] = overview
 def home():
     deals = [p for p in PRODUCTS if p["on_sale"]]
     featured = [p for p in PRODUCTS if p["badge"] in ("New", "Best seller", "Pro pick")]
-    return render_template("home.html", deals=deals[:4], featured=featured[:4], portfolio=data.PORTFOLIO[:3])
+    booking = whatsapp_link(f'Hello {data.STORE["name"]}! I would like to book a photo session.')
+    slides = [{**s, "href": booking if s["link"] == "whatsapp" else s["link"], "external": s["link"] == "whatsapp"}
+              for s in data.HERO_SLIDES]
+    return render_template("home.html", deals=deals[:4], featured=featured[:4], portfolio=data.PORTFOLIO[:3],
+                           slides=slides, slide_seconds=data.SLIDE_SECONDS)
 
 
 @app.route("/shop")
