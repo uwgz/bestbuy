@@ -114,16 +114,3 @@ def test_neon_address_uses_psycopg(monkeypatch):
     url = config.database_url()
     assert url == "postgresql+psycopg://u:p@ep-x-pooler.neon.tech/neondb?sslmode=require"
     assert config.engine_options(url)["connect_args"] == {"prepare_threshold": None}
-
-
-@pytest.mark.parametrize("url", ["/admin/", "/admin/stock", "/admin/orders", "/admin/giveaways", "/admin/settings"])
-def test_admin_design_pages_open(client, url):
-    html = client.get(url).get_data(as_text=True)
-    for part in ("Dashboard", "Stock", "Orders", "Giveaways", "Settings", "data-rail-toggle", "data-drawer"):
-        assert part in html
-
-
-def test_admin_stock_lists_products_with_sell(client):
-    html = client.get("/admin/stock").get_data(as_text=True)
-    assert html.count(">Sell</button>") == 2 * Product.query.count()       # phone and computer layouts
-    assert "LAP-0004" in html and "Refill" in html

@@ -29,7 +29,24 @@ def engine_options(url):
     return {}
 
 
+def secret_key():
+    """Signs the admin login cookie. Set SECRET_KEY on Vercel; without it, logins don't survive a restart."""
+    key = os.environ.get("SECRET_KEY")
+    if key:
+        return key
+    if not os.environ.get("VERCEL"):
+        return "dev-only-not-secret"
+    return os.urandom(32).hex()
+
+
 class Config:
+    SECRET_KEY = secret_key()
+    SECRET_KEY_SET = bool(os.environ.get("SECRET_KEY")) or not os.environ.get("VERCEL")
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_SECURE = bool(os.environ.get("VERCEL"))
+    PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 14      # stay signed in for two weeks
+    TIMEZONE = os.environ.get("TIMEZONE", "Africa/Kigali")
     SQLALCHEMY_DATABASE_URI = database_url()
     SQLALCHEMY_ENGINE_OPTIONS = engine_options(SQLALCHEMY_DATABASE_URI)
     SQLALCHEMY_TRACK_MODIFICATIONS = False

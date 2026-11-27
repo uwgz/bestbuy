@@ -3,14 +3,15 @@
 A website for an electronics shop with a photography studio.
 **Flask** serves the pages, **Flask-SQLAlchemy** keeps everything the site shows in a database
 (Neon PostgreSQL online, a small SQLite file on your computer), and **Tailwind CSS** styles it.
-There is no login or admin yet: that is the next step. Visitors' carts and likes stay in their browser;
-orders go to your WhatsApp.
+The admin is at **/admin**: the first visit creates the owner's account, then you sign in.
+Visitors' carts and likes stay in their browser; orders go to your WhatsApp.
 
 ## What is where
 | Folder / file | What it is |
 |---|---|
-| `bestbuy/models.py` | The database tables: Setting, Category, Product (+ ProductPhoto), Service, PortfolioItem, HeroSlide |
+| `bestbuy/models.py` | The database tables: Setting, Category, Product (+ ProductPhoto), Service, PortfolioItem, HeroSlide, User, Order (+ OrderItem), AuditLog |
 | `bestbuy/pages.py` | The pages: home, shop, product, cart, photography, contact |
+| `bestbuy/admin.py` | The admin (/admin): sign in; Stock: add, edit, sell, refill, hide / show |
 | `bestbuy/seed.py` | The **starting content**, copied into an empty database once. After that the database is what counts |
 | `bestbuy/config.py` | Reads `DATABASE_URL` (Neon) |
 | `templates/` | The HTML pages (Tailwind classes) |
@@ -47,7 +48,8 @@ Until the admin pages exist: open your Neon project → **Tables**, and edit row
 ## Host on Vercel
 1. Push to GitHub. Vercel builds it.
 2. Vercel → Settings → Environment Variables: `DATABASE_URL` = your Neon connection string
-   (or connect Neon in Vercel's Storage tab, which adds it for you). Redeploy.
+   (or connect Neon in Vercel's Storage tab, which adds it for you), and `SECRET_KEY` = a long random text
+   (`python -c "import secrets; print(secrets.token_hex(32))"`), type **Secret**. Redeploy.
 3. The first visit creates the tables and loads the starting content.
 
 ## Styles (Tailwind CSS)

@@ -7,6 +7,9 @@ Database tables. Every page reads its content from here; nothing is hard-coded i
     Service        photography studio services
     PortfolioItem  photos on the Photography page
     HeroSlide      the home page slideshow
+    User           people who can sign in to /admin
+    Order          a sale; OrderItem holds what was sold
+    AuditLog       who did what, and when
 """
 from datetime import datetime, timezone
 from decimal import ROUND_HALF_UP, Decimal
@@ -214,3 +217,89 @@ class HeroSlide(TimestampMixin, OrderedMixin, db.Model):
     text = db.Column(db.String(160), nullable=False)        # "The new iPhone 17 Pro is here."
     button = db.Column(db.String(24), nullable=False, default="Shop now")
     link = db.Column(db.String(300), nullable=False, default="/shop")
+
+
+# ---------------------------------------------------------------- admin
+class User(TimestampMixin, db.Model):
+    """Someone who can sign in to /admin."""
+
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), nullable=False)
+    email = db.Column(db.String(160), unique=True, nullable=False, index=True)   # stored lower-case
+    password_hash = db.Column(db.String(256), nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    last_login_at = db.Column(db.DateTime(timezone=True))
+
+    def set_password(self, password):
+        from werkzeug.security import generate_password_hash
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        from werkzeug.security import check_password_hash
+        return check_password_hash(self.password_hash, password)
+
+    @property
+    def first_name(self):
+        return self.name.split()[0] if self.name else "Owner"
+
+
+class Order(TimestampMixin, db.Model):
+    """A sale. Made with "Sell" in Stock (paid in the shop), or later from the website's cart (waiting)."""
+
+    __tablename__ = "orders"
+    __table_args__ = (db.CheckConstraint("status IN ('waiting', 'paid', 'cancelled')", name="ck_orders_status"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    status = db.Column(db.String(16), nullable=False, default="paid", index=True)
+    source = db.Column(db.String(16), nullable=False, default="shop")      # shop | website
+    sold_on = db.Column(db.Date, nullable=False, index=True)               # the day of the sale
+    customer = db.Column(db.String(120), nullable=False, default="")
+    note = db.Column(db.String(300), nullable=False, default="")
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), index=True)
+
+    items = db.relationship("OrderItem", back_populates="order", cascade="all, delete-orphan", lazy="selectin")
+
+    @property
+    def number(self):
+        return f"#{self.id:05d}"
+
+    @property
+    def total(self):
+        return sum((i.line_total for i in self.items), Decimal(0))
+
+
+class OrderItem(db.Model):
+    """One product in an order. Name, SKU and price are copied, so history stays right if the product changes."""
+
+    __tablename__ = "order_items"
+    __table_args__ = (db.CheckConstraint("qty > 0", name="ck_order_items_qty"),
+                      db.CheckConstraint("unit_price >= 0", name="ck_order_items_price"))
+
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.Integer, db.ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id", ondelete="SET NULL"), index=True)
+    product_name = db.Column(db.String(40), nullable=False)    # the short name at the time
+    sku = db.Column(db.String(16), nullable=False, default="")
+    qty = db.Column(db.Integer, nullable=False)
+    unit_price = db.Column(db.Numeric(12, 2), nullable=False)
+
+    order = db.relationship("Order", back_populates="items")
+
+    @property
+    def line_total(self):
+        return Decimal(self.unit_price) * self.qty
+
+
+class AuditLog(db.Model):
+    """Who did what, and when. Written by bestbuy.admin.audit()."""
+
+    __tablename__ = "audit_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    action = db.Column(db.String(64), nullable=False)
+    details = db.Column(db.Text, default="")
+    ip_address = db.Column(db.String(45))
+    created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False, index=True)
