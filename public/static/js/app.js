@@ -112,16 +112,25 @@
       Object.keys(cart).forEach(slug => { if (!CATALOG[slug]) delete cart[slug]; });   // products no longer sold
       const slugs = Object.keys(cart);
       lines.innerHTML = "";
-      let total = 0;
+      let total = 0, before = 0;
       const orderLines = [];
       slugs.forEach(slug => {
         const p = CATALOG[slug], qty = cart[slug], line = tpl.content.firstElementChild.cloneNode(true);
+        const was = p.discount ? p.was : p.price;
         total += p.price * qty;
-        orderLines.push(`• ${qty} × ${p.short} (${p.sku}): ${money(p.price * qty)}`);
+        before += was * qty;
+        orderLines.push(`• ${qty} × ${p.short} (${p.sku}): ${money(p.price * qty)}${p.discount ? ` (−${p.discount}%)` : ""}`);
         $$("[data-link]", line).forEach(a => (a.href = p.url));
         $("[data-img]", line).src = p.image;
         $("[data-name]", line).textContent = p.short;
-        $("[data-sku]", line).textContent = `${p.sku} · ${money(p.price)} each`;
+        $("[data-sku]", line).textContent = p.sku;
+        $("[data-each]", line).textContent = `${money(p.price)} each`;
+        $("[data-each]", line).classList.toggle("text-sale", !!p.discount);
+        $("[data-was]", line).hidden = $("[data-off]", line).hidden = !p.discount;
+        $("[data-was]", line).textContent = money(was);
+        $("[data-off]", line).textContent = `−${p.discount}%`;
+        $("[data-saved]", line).hidden = !p.discount;
+        $("[data-saved]", line).textContent = `You save ${money((was - p.price) * qty)}`;
         $("[data-qty]", line).textContent = qty;
         $("[data-total]", line).textContent = money(p.price * qty);
         const change = d => { const c = getCart(); c[slug] = Math.min(p.stock, Math.max(1, (c[slug] || 1) + d)); setCart(c); render(); };
@@ -134,8 +143,14 @@
       lines.hidden = empty;
       $("[data-cart-summary]").hidden = empty;
       $("[data-cart-empty]").hidden = !empty;
+      const saved = before - total;
+      $("[data-cart-savings]").hidden = $("[data-cart-saved]").hidden = saved <= 0;
+      $("[data-cart-before]").textContent = money(before);
+      $("[data-cart-discount]").textContent = `−${money(saved)}`;
+      $("[data-cart-saved]").textContent = `You save ${money(saved)} with today's discounts`;
       $("[data-cart-total]").textContent = money(total);
-      $("[data-cart-order]").href = waLink(`Hello ${store.name}! I'd like to order:\n${orderLines.join("\n")}\nTotal: ${money(total)}`);
+      $("[data-cart-order]").href = waLink(`Hello ${store.name}! I'd like to order:\n${orderLines.join("\n")}\n`
+        + (saved > 0 ? `Discounts: −${money(saved)}\n` : "") + `Total: ${money(total)}`);
     };
     render();
   }

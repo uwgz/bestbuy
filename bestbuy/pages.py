@@ -176,7 +176,8 @@ def init_app(app):
 
     @app.route("/cart")
     def cart():
-        catalog = {p.slug: {"short": p.short, "sku": p.sku, "price": float(p.final_price), "image": p.image,
+        catalog = {p.slug: {"short": p.short, "sku": p.sku, "price": float(p.final_price), "was": float(p.price),
+                            "discount": p.discount if p.on_sale else 0, "image": p.image,
                             "stock": p.stock, "url": url_for("product", slug=p.slug)} for p in active_products()}
         return render_template("cart.html", catalog=catalog)
 
