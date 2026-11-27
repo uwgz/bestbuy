@@ -32,8 +32,8 @@
         <span class="block h-8 w-[30px] [&_svg]:h-full [&_svg]:w-full">{% include "partials/logo_anim.svg" %}</span>
         <span class="hidden md:inline">{{ store.name }}</span>
       </a>
-      <div class="flex items-center gap-5 font-display text-[15px] font-semibold tracking-[-0.01em] sm:gap-9 sm:text-[17px]">
-        <a href="{{ url_for('shop') }}" class="py-2 transition {{ 'text-zinc-900 dark:text-white' if nav_section != 'photo' else 'text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-white' }}"{{ ' aria-current="page"' if nav_section == 'devices' }}>Devices</a>
+      <div class="flex items-center gap-4 font-display text-[13px] font-semibold uppercase tracking-[0.08em] sm:gap-9 sm:text-[15px]">
+        <a href="{{ url_for('shop') }}" class="py-2 transition {{ 'text-zinc-900 dark:text-white' if nav_section != 'photo' else 'text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-white' }}"{{ ' aria-current="page"' if nav_section == 'devices' }}>E-Devices</a>
         <a href="{{ url_for('studio') }}" class="py-2 transition {{ 'text-zinc-900 dark:text-white' if nav_section != 'devices' else 'text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-white' }}"{{ ' aria-current="page"' if nav_section == 'photo' }}>Photography</a>
       </div>
       <div class="flex flex-1 items-center justify-end gap-1">
@@ -47,6 +47,18 @@
       </div>
     </nav>
   </header>
+
+  {# phones: day/night tab in the right edge of the screen. It slides out, waits a few seconds, and slides back
+     into the edge, leaving a small handle; tap the handle to bring it out, tap it again to switch. #}
+  <button type="button" data-theme-tab aria-label="Switch day / night"
+          class="group fixed right-0 top-1/2 z-30 -translate-y-1/2 pl-4 transition-[translate] duration-700 ease-[cubic-bezier(.34,1.56,.64,1)] translate-x-[calc(100%-26px)] data-out:translate-x-0 motion-reduce:transition-none sm:hidden">
+    <span class="relative flex h-[60px] w-[58px] items-center justify-center rounded-l-[22px] border border-r-0 border-zinc-200/80 bg-white/80 shadow-[-8px_10px_30px_-10px_rgba(0,0,0,.35)] backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/80 dark:shadow-[-8px_10px_30px_-8px_rgba(0,0,0,.9)]">
+      <span class="absolute left-[4px] h-7 w-[3px] rounded-full bg-zinc-400/70 transition-opacity duration-500 group-data-out:opacity-0 dark:bg-zinc-500/80"></span>
+      <span class="grid size-10 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-700 text-white shadow-lg shadow-violet-600/40 transition duration-700 ease-[cubic-bezier(.34,1.56,.64,1)] -rotate-[120deg] scale-50 opacity-0 group-data-out:rotate-0 group-data-out:scale-100 group-data-out:opacity-100 dark:from-amber-300 dark:to-orange-500 dark:shadow-orange-500/40" data-theme-tab-icon>
+        <span class="dark:hidden">{{ icon("moon", "size-5") }}</span><span class="hidden dark:inline">{{ icon("sun", "size-5") }}</span>
+      </span>
+    </span>
+  </button>
 
   <main class="flex-1">{% block content %}{% endblock %}</main>
 

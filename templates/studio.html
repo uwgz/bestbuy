@@ -7,10 +7,10 @@
   <h1 class="mt-2 text-[clamp(2.5rem,8vw,4rem)] leading-[1.05]">Photography.</h1>
   <p class="mt-2 max-w-2xl text-[19px] text-[#6e6e73] dark:text-[#a1a1a6]">Portraits, passport photos, weddings and product shoots, by photographers who love what they do.</p>
   <nav class="-mx-5 mt-6 flex gap-2 overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden" aria-label="Services">
+    <a href="{{ whatsapp_link('Hello ' ~ store.name ~ '! I would like to book a photo session.') }}" target="_blank" rel="noopener" aria-label="Book us on WhatsApp" class="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-wa px-4 text-sm font-semibold whitespace-nowrap text-white hover:bg-wa/90">{{ icon("whatsapp", "size-4") }} Book us</a>
     {% for s in services %}<a href="#service-{{ loop.index }}" class="inline-flex min-h-9 shrink-0 items-center rounded-full bg-[#f5f5f7] px-4 text-sm whitespace-nowrap hover:bg-[#e8e8ed] dark:bg-[#1d1d1f] dark:hover:bg-[#2a2a2d]">{{ s.name }}</a>{% endfor %}
     {% if gear %}<a href="#gear" class="inline-flex min-h-9 shrink-0 items-center rounded-full bg-[#f5f5f7] px-4 text-sm whitespace-nowrap hover:bg-[#e8e8ed] dark:bg-[#1d1d1f] dark:hover:bg-[#2a2a2d]">Our gear</a>{% endif %}
     <a href="#portfolio" class="inline-flex min-h-9 shrink-0 items-center rounded-full bg-[#f5f5f7] px-4 text-sm whitespace-nowrap hover:bg-[#e8e8ed] dark:bg-[#1d1d1f] dark:hover:bg-[#2a2a2d]">Recent work</a>
-    <a href="{{ whatsapp_link('Hello ' ~ store.name ~ '! I would like to book a photo session.') }}" target="_blank" rel="noopener" class="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-wa px-4 text-sm whitespace-nowrap text-white hover:bg-wa/90">{{ icon("whatsapp", "size-4") }} Book on WhatsApp</a>
   </nav>
 </section>
 

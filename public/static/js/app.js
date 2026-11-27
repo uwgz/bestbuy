@@ -27,6 +27,25 @@
     try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch (e) {}
   }));
 
+  // phones: the day/night tab peeks out of the right edge, then slides back in
+  const tab = $("[data-theme-tab]");
+  if (tab) {
+    let timer;
+    const out = ms => { tab.toggleAttribute("data-out", true); clearTimeout(timer); timer = setTimeout(() => tab.removeAttribute("data-out"), ms); };
+    tab.addEventListener("click", () => {
+      if (!tab.hasAttribute("data-out")) return out(4000);             // the handle: come out
+      const dark = document.documentElement.classList.toggle("dark");  // out: switch day / night
+      try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch (e) {}
+      const icon = $("[data-theme-tab-icon]", tab);
+      icon.animate([{ transform: "rotate(-90deg) scale(.6)" }, { transform: "rotate(0) scale(1)" }], { duration: 500, easing: "cubic-bezier(.34,1.56,.64,1)" });
+      out(2500);
+    });
+    // show it once per visit, shortly after the first page opens
+    let shown = false;
+    try { shown = sessionStorage.getItem("theme-tab") === "1"; sessionStorage.setItem("theme-tab", "1"); } catch (e) {}
+    if (!shown) setTimeout(() => out(3500), 1200);
+  }
+
   // ---------- cart (slug -> quantity) ----------
   const getCart = () => read("cart", {});
   const setCart = cart => { write("cart", cart); paintCount(); paintCards(); paintProduct(); };
