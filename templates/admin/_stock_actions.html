@@ -1,0 +1,5 @@
+{% set ib = "grid size-9 place-items-center rounded-lg border border-zinc-200 text-zinc-600 transition hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-700 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white" %}
+<button type="button" class="h-9 rounded-lg bg-brand px-3.5 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-40"{{ ' disabled' if not p.stock }}>Sell</button>
+<button type="button" class="h-9 rounded-lg border border-zinc-200 px-3 text-sm font-medium transition hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-500">Refill</button>
+<button type="button" class="{{ ib }}" aria-label="Edit {{ p.short }}" title="Edit">{{ icon("pencil", "size-4") }}</button>
+<button type="button" class="{{ ib }}" aria-label="{{ 'Hide' if p.is_active else 'Show' }} {{ p.short }}" title="{{ 'Hide in the shop' if p.is_active else 'Show in the shop' }}">{{ icon("eye" if p.is_active else "eye-off", "size-4") }}</button>

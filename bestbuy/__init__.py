@@ -21,8 +21,9 @@ def create_app(overrides=None):
 
     db.init_app(app)
 
-    from . import commands, pages
+    from . import admin, commands, pages
     pages.init_app(app)
+    app.register_blueprint(admin.bp)
     commands.init_app(app)
     _version_static_links(app)
 
