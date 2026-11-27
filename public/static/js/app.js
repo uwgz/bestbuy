@@ -106,58 +106,83 @@
     }));
   }
 
-  // ---------- home slideshow: moves on by itself; the filling dot shows when ----------
+  // ---------- home slideshow: endless loop, moves on by itself; the filling dot shows when ----------
   const show = $("[data-slides]");
   if (show) {
     const track = $("[data-slide-track]", show), slides = $$("[data-slide]", show), dots = $$("[data-slide-dot]", show);
-    const seconds = Number(show.dataset.seconds || 6);
+    const n = slides.length, seconds = Number(show.dataset.seconds || 6);
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;   // no automatic sliding for them
-    let current = 0, scrolling = null;
+    let current = 0, settle = null, held = still;
 
-    const center = i => slides[i].offsetLeft - (track.clientWidth - slides[i].clientWidth) / 2;
+    // a copy of the last photo before the first and of the first after the last, so a photo always peeks in
+    // on both sides and the loop never runs backwards through every photo
+    const copy = el => { const c = el.cloneNode(true); c.setAttribute("aria-hidden", "true"); c.removeAttribute("data-slide");
+                         c.querySelectorAll("a").forEach(a => a.tabIndex = -1); return c; };
+    const before = copy(slides[n - 1]), after = copy(slides[0]);
+    track.prepend(before); track.append(after);
+    const twin = i => (i === 0 ? after : i === n - 1 ? before : null);   // the copy that looks like slide i
+
+    const left = el => el.offsetLeft - (track.clientWidth - el.clientWidth) / 2;
+    const jump = el => { track.style.scrollSnapType = "none"; track.scrollLeft = left(el); void track.offsetWidth; track.style.scrollSnapType = ""; };
+
     const activate = i => {
       current = i;
       slides.forEach((sl, k) => sl.toggleAttribute("data-current", k === i));
+      [before, after].forEach(c => c.toggleAttribute("data-current", c === twin(i)));
       dots.forEach((d, k) => {
         d.toggleAttribute("data-active", k === i);
         d.setAttribute("aria-selected", k === i);
         const fill = $("[data-fill]", d);
         fill.style.animation = "none";
         void fill.offsetWidth;                                  // restart the fill from empty
-        fill.style.animation = k === i && !still ? `slide-fill ${seconds}s linear forwards` : "";
-        if (k === i && still) fill.style.width = "100%";
-        fill.style.animationPlayState = show.matches(":hover") ? "paused" : "running";
+        fill.style.animation = k === i ? `slide-fill ${seconds}s linear forwards` : "";
+        fill.style.animationPlayState = show.matches(":hover") || held ? "paused" : "running";
       });
     };
     const go = i => {
-      i = (i + slides.length) % slides.length;
-      track.scrollTo({ left: center(i), behavior: "smooth" });
-      activate(i);
+      const target = i >= n ? after : i < 0 ? before : slides[i];   // past the end: slide onto the copy, then hop back
+      track.scrollTo({ left: left(target), behavior: "smooth" });
+      activate((i + n) % n);
     };
+
     // when the fill reaches the end, the next photo comes
     dots.forEach((d, k) => {
       $("[data-fill]", d).addEventListener("animationend", () => k === current && go(current + 1));
       d.addEventListener("click", () => go(k));
     });
-    // swiping: when the track settles, the photo in the middle becomes the current one
+    // when scrolling stops: on a copy, hop to the real photo; after a swipe, follow the photo in the middle
     track.addEventListener("scroll", () => {
-      clearTimeout(scrolling);
-      scrolling = setTimeout(() => {
+      clearTimeout(settle);
+      settle = setTimeout(() => {
         const mid = track.scrollLeft + track.clientWidth / 2;
-        let best = 0;
-        slides.forEach((sl, k) => { if (Math.abs(sl.offsetLeft + sl.clientWidth / 2 - mid) < Math.abs(slides[best].offsetLeft + slides[best].clientWidth / 2 - mid)) best = k; });
-        if (best !== current) activate(best);
-      }, 120);
+        const all = [...track.children];
+        const near = all.reduce((best, el) => Math.abs(el.offsetLeft + el.clientWidth / 2 - mid) < Math.abs(best.offsetLeft + best.clientWidth / 2 - mid) ? el : best);
+        if (near === before) { jump(slides[n - 1]); if (current !== n - 1) activate(n - 1); }
+        else if (near === after) { jump(slides[0]); if (current !== 0) activate(0); }
+        else { const k = slides.indexOf(near); if (k !== current) activate(k); }
+      }, 140);
     }, { passive: true });
-    // pause while the visitor looks closely (mouse over it, finger on it) or the tab is hidden
-    const pause = on => dots.forEach(d => ($("[data-fill]", d).style.animationPlayState = on ? "paused" : "running"));
+
+    // pause while the visitor looks closely (mouse over it, finger on it), the tab is hidden, or ‖ was pressed
+    const pauseBtn = $("[data-slide-pause]", show);
+    const pause = on => dots.forEach(d => ($("[data-fill]", d).style.animationPlayState = on || held ? "paused" : "running"));
+    if (pauseBtn) {
+      pauseBtn.setAttribute("aria-pressed", held);
+      pauseBtn.addEventListener("click", e => {
+        e.stopPropagation();
+        held = !held;
+        pauseBtn.setAttribute("aria-pressed", held);
+        pauseBtn.setAttribute("aria-label", held ? "Play the slideshow" : "Pause the slideshow");
+        pause(false);
+      });
+    }
     show.addEventListener("mouseenter", () => pause(true));
     show.addEventListener("mouseleave", () => pause(false));
     show.addEventListener("touchstart", () => pause(true), { passive: true });
     show.addEventListener("touchend", () => pause(false), { passive: true });
     document.addEventListener("visibilitychange", () => pause(document.hidden));
-    addEventListener("resize", () => track.scrollTo({ left: center(current) }));
-    track.scrollLeft = center(0);
+    addEventListener("resize", () => jump(slides[current]));
+    jump(slides[0]);
     activate(0);
   }
 
