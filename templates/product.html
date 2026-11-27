@@ -47,7 +47,7 @@
         {% if p.on_sale %}
           <p class="text-[15px] font-semibold uppercase text-sale">Save {{ money(p.save) }}</p>
           <p class="text-4xl font-bold tracking-tight text-sale">{{ money(p.final_price) }}</p>
-          <p class="text-[15px] text-zinc-500">Was <s>{{ money(p.price) }}</s></p>
+          <p class="text-[15px] text-zinc-500">Was <s>{{ money(p.price) }}</s>{% if p.discount_until %} · offer ends {{ p.discount_until.strftime("%A, %B") }} {{ p.discount_until.day }}{% endif %}</p>
         {% else %}
           <p class="text-4xl font-bold tracking-tight">{{ money(p.price) }}</p>
         {% endif %}

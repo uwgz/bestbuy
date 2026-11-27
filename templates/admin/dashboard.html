@@ -15,7 +15,8 @@
 {% endmacro %}
 {% set kinds = {"sale": ("Sale", "bg-brand/10 text-brand"), "refill": ("Refill", "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"),
                 "added": ("New product", "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"),
-                "return": ("Return", "bg-amber-500/15 text-amber-700 dark:text-amber-400"), "loss": ("Loss", "bg-red-500/10 text-red-700 dark:text-red-400")} %}
+                "return": ("Return", "bg-amber-500/15 text-amber-700 dark:text-amber-400"), "loss": ("Loss", "bg-red-500/10 text-red-700 dark:text-red-400"),
+                "giveaway": ("Giveaway", "bg-violet-500/12 text-violet-700 dark:text-violet-400")} %}
 
 {% block content %}
 <div class="flex flex-wrap items-end justify-between gap-4">
@@ -34,9 +35,9 @@
 {# ---------- money in the period ---------- #}
 <div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
   {{ tile("chart", "Sales", money(flow.sales), flow.units_sold ~ " unit" ~ ("s" if flow.units_sold != 1) ~ " sold · " ~ flow.orders ~ " sale" ~ ("s" if flow.orders != 1), "bg-brand/10 text-brand") }}
-  {{ tile("star", "Profit", money(flow.profit), (flow.margin ~ "% of sales, after buying price, losses and refunds") if flow.sales else "Appears after the first sale", "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400") }}
+  {{ tile("star", "Profit", money(flow.profit), (flow.margin ~ "% of sales, after buying price, losses, refunds and gifts") if flow.sales else "Appears after the first sale", "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400") }}
   {{ tile("package", "Stock bought", money(flow.bought), flow.units_bought ~ " unit" ~ ("s" if flow.units_bought != 1) ~ " added or refilled") }}
-  {{ tile("undo", "Losses & returns", money(flow.losses + flow.refunds), flow.units_lost ~ " lost · " ~ flow.units_returned ~ " returned · " ~ money(flow.refunds) ~ " refunded", "bg-red-500/10 text-red-700 dark:text-red-400") }}
+  {{ tile("undo", "Losses, returns & gifts", money(flow.losses + flow.refunds + flow.gifts), flow.units_lost ~ " lost · " ~ flow.units_returned ~ " returned · " ~ flow.prizes ~ " prize" ~ ("s" if flow.prizes != 1) ~ " given", "bg-red-500/10 text-red-700 dark:text-red-400") }}
 </div>
 
 <div class="mt-4 grid gap-4 xl:grid-cols-3">
@@ -151,7 +152,7 @@
         <li class="grid grid-cols-[96px_minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 sm:grid-cols-[110px_minmax(0,1fr)_80px_150px_90px]">
           <span><span class="rounded-full px-2.5 py-0.5 text-xs font-semibold {{ k[1] }}">{{ k[0] }}</span></span>
           <span class="min-w-0"><span class="block truncate text-sm font-medium">{{ m.product_name }}</span><span class="block truncate text-xs text-zinc-400">{{ m.sku }}{{ " · " ~ m.reason if m.reason }}</span></span>
-          <span class="text-right text-sm font-semibold tabular-nums {{ 'text-emerald-700 dark:text-emerald-400' if m.qty > 0 else '' }}">{{ "+" if m.qty > 0 }}{{ m.qty }}</span>
+          <span class="text-right text-sm font-semibold tabular-nums {{ 'text-emerald-700 dark:text-emerald-400' if m.qty > 0 else '' }}">{{ "+" if m.qty > 0 }}{{ m.qty if m.qty else "—" }}</span>
           <span class="hidden text-right text-sm tabular-nums sm:block">{{ money(m.amount) if m.amount else "—" }}</span>
           <span class="hidden text-right text-xs text-zinc-400 sm:block">{{ m.happened_on.strftime("%b") }} {{ m.happened_on.day }}</span>
         </li>

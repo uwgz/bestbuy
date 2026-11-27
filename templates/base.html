@@ -89,9 +89,13 @@
     </div>
     <div class="wrap mt-10 flex flex-col items-center justify-between gap-3 border-t border-zinc-200 pt-6 text-xs sm:flex-row dark:border-zinc-800">
       <p>© <span data-year>2026</span> {{ store.name }}. All rights reserved.</p>
-      <button type="button" data-theme-toggle class="inline-flex items-center gap-1.5 hover:text-zinc-900 sm:hidden dark:hover:text-white">
-        <span class="dark:hidden">{{ icon("moon", "size-4") }} Night mode</span><span class="hidden dark:inline-flex dark:items-center dark:gap-1.5">{{ icon("sun", "size-4") }} Day mode</span>
-      </button>
+      <div class="flex items-center gap-5">
+        <button type="button" data-theme-toggle class="inline-flex items-center gap-1.5 hover:text-zinc-900 sm:hidden dark:hover:text-white">
+          <span class="dark:hidden">{{ icon("moon", "size-4") }} Night mode</span><span class="hidden dark:inline-flex dark:items-center dark:gap-1.5">{{ icon("sun", "size-4") }} Day mode</span>
+        </button>
+        {# signed out: the sign-in page; signed in: straight to the dashboard #}
+        <a href="{{ url_for('admin.dashboard') }}" rel="nofollow" class="inline-flex items-center gap-1.5 font-semibold tracking-wider hover:text-zinc-900 dark:hover:text-white">{{ icon("shield", "size-3.5") }}ADMIN</a>
+      </div>
     </div>
   </footer>
 
@@ -103,6 +107,71 @@
 
   <div data-toast role="status" aria-live="polite"
        class="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 translate-y-4 rounded-full bg-zinc-900 px-5 py-2.5 text-[15px] text-white opacity-0 transition duration-300 dark:bg-white dark:text-zinc-900"></div>
+
+  {# ---------- giveaway: a random visitor wins (see /giveaway/draw) ---------- #}
+  <dialog id="prize" tabindex="-1" data-giveaways="{{ giveaway_on() }}" data-draw="{{ url_for('giveaway_draw') }}"
+          class="m-auto w-[min(440px,calc(100vw-2rem))] overflow-hidden rounded-3xl outline-none bg-white p-0 text-center text-zinc-900 shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm dark:bg-zinc-900 dark:text-zinc-100">
+    <div class="relative bg-gradient-to-b from-brand/15 to-transparent px-6 pb-2 pt-8">
+      <button type="button" data-prize-close class="absolute right-3 top-3 grid size-9 place-items-center rounded-full text-zinc-500 hover:bg-black/5 dark:hover:bg-white/10" aria-label="Close">{{ icon("x", "size-5") }}</button>
+      <span class="mx-auto grid size-16 place-items-center rounded-2xl bg-brand text-white shadow-lg shadow-brand/30">{{ icon("gift", "size-8") }}</span>
+      <p class="mt-4 text-sm font-semibold uppercase tracking-wider text-brand">You're our lucky visitor</p>
+      <h2 class="mt-1 text-2xl leading-tight">You won <a data-prize-name class="underline decoration-brand/40 decoration-2 underline-offset-4 hover:decoration-brand"></a></h2>
+    </div>
+    <div class="px-6 pb-6">
+      <p class="mt-4 text-sm text-zinc-500 dark:text-zinc-400">Your prize code</p>
+      <button type="button" data-prize-copy class="group mt-1.5 flex w-full flex-col items-center justify-center gap-1 rounded-2xl border-2 border-dashed border-zinc-300 px-4 py-4 transition hover:border-brand dark:border-zinc-700" title="Copy">
+        <span data-prize-code class="whitespace-nowrap font-mono text-[25px] font-semibold tracking-[.1em] sm:text-[28px]"></span>
+        <span class="text-xs font-semibold text-brand" data-prize-copied>Tap to copy</span>
+      </button>
+      <p class="mt-4 text-[15px] leading-relaxed text-zinc-600 dark:text-zinc-300">Bring this code to the shop by <b data-prize-ends></b> to collect your prize. Keep it private: whoever shows the code collects it.</p>
+      <div class="mt-5 grid gap-2">
+        <a data-prize-wa target="_blank" rel="noopener" class="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-wa text-[16px] font-semibold text-white hover:brightness-95">{{ icon("whatsapp", "size-5") }} Send my code to the shop</a>
+        <button type="button" data-prize-close class="h-11 rounded-xl text-[15px] font-medium text-zinc-600 hover:bg-zinc-100 dark:text-zinc-300 dark:hover:bg-white/5">I've saved it</button>
+      </div>
+    </div>
+  </dialog>
+  {# brings the code back later #}
+  <button type="button" data-prize-chip hidden class="fixed bottom-5 right-5 z-40 inline-flex h-12 items-center gap-2 rounded-full bg-brand pl-4 pr-5 text-[15px] font-semibold text-white shadow-lg shadow-brand/30 hover:bg-brand-dark">{{ icon("gift", "size-5") }} My prize code</button>
+  <script>
+    (() => {
+      const dlg = document.getElementById("prize"), chip = document.querySelector("[data-prize-chip]");
+      const get = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } };
+      const put = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+      const show = w => {
+        const name = dlg.querySelector("[data-prize-name]");
+        name.textContent = w.prize.name;
+        if (w.prize.url) name.href = w.prize.url; else name.removeAttribute("href");
+        dlg.querySelector("[data-prize-code]").textContent = w.code;
+        dlg.querySelector("[data-prize-ends]").textContent = w.ends;
+        const wa = dlg.querySelector("[data-prize-wa]");
+        wa.hidden = !w.whatsapp; wa.href = w.whatsapp || "#";
+        dlg.showModal();
+        dlg.focus();                       // no focus ring on the close button
+      };
+      const saved = get("bb-prize");
+      if (saved) chip.hidden = false;
+      chip.addEventListener("click", () => { const w = get("bb-prize"); if (w) show(w); });
+      dlg.addEventListener("click", e => { if (e.target === dlg || e.target.closest("[data-prize-close]")) dlg.close(); });
+      dlg.querySelector("[data-prize-copy]").addEventListener("click", () => {
+        navigator.clipboard?.writeText(dlg.querySelector("[data-prize-code]").textContent).then(() => {
+          const c = dlg.querySelector("[data-prize-copied]"); c.textContent = "Copied ✓"; setTimeout(() => c.textContent = "Tap to copy", 1800);
+        });
+      });
+      // draw: once per giveaway, a few seconds after the page opens
+      const live = (dlg.dataset.giveaways || "").split(",").filter(Boolean);
+      const drawn = get("bb-drawn") || [];
+      if (!live.length || live.every(id => drawn.includes(id))) return;
+      setTimeout(() => {
+        fetch(dlg.dataset.draw, { method: "POST", headers: { "X-Requested-With": "fetch" } })
+          .then(r => r.ok ? r.json() : null)
+          .then(w => {
+            if (!w) return;
+            put("bb-drawn", [...new Set([...drawn, ...live])].slice(-50));
+            if (w.won) { put("bb-prize", w); chip.hidden = false; show(w); }
+          }).catch(() => {});
+      }, 4000);
+    })();
+  </script>
 
   {% block scripts %}{% endblock %}{# page data first, then the script that uses it #}
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>

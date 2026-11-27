@@ -12,10 +12,11 @@ Database tables. Every page reads its content from here; nothing is hard-coded i
     StockMove      every change to stock: added, refill, sale, return, loss
     AuditLog       who did what, and when
 """
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo
 from decimal import ROUND_HALF_UP, Decimal
 
-from flask import g
+from flask import current_app, g
 
 from .extensions import db
 
@@ -59,6 +60,11 @@ STORE_DEFAULTS = {
     "tiktok": "",
     "slide_seconds": "6",     # how long each home slide stays
 }
+
+
+def local_today() -> date:
+    """Today in the shop's time zone (Kigali), not the server's."""
+    return datetime.now(ZoneInfo(current_app.config.get("TIMEZONE", "Africa/Kigali"))).date()
 
 
 def opening_hours_text(values):
@@ -134,6 +140,7 @@ class Product(TimestampMixin, OrderedMixin, db.Model):
     price = db.Column(db.Numeric(12, 2), nullable=False)        # selling price, before discount
     cost = db.Column(db.Numeric(12, 2), nullable=False, default=0)   # what one unit cost you (average of what you bought)
     discount = db.Column(db.Integer, nullable=False, default=0)  # % off; 0 = not on sale
+    discount_until = db.Column(db.Date)                           # last day of the discount (empty = no end)
     badge = db.Column(db.String(32), nullable=False, default="")  # New, Best seller, Deal …
     stock = db.Column(db.Integer, nullable=False, default=0)      # units in the shop
     description = db.Column(db.Text, nullable=False, default="")  # "- " lines become bullet points
@@ -165,12 +172,13 @@ class Product(TimestampMixin, OrderedMixin, db.Model):
 
     @property
     def on_sale(self):
-        return self.discount > 0
+        """The discount counts only up to and including its last day."""
+        return self.discount > 0 and (self.discount_until is None or self.discount_until >= local_today())
 
     @property
     def final_price(self):
         price = Decimal(self.price)
-        if not self.discount:
+        if not self.on_sale:
             return price
         return (price * (100 - self.discount) / 100).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
@@ -322,7 +330,7 @@ class StockMove(db.Model):
          loss    damaged, lost or stolen (written off)           qty < 0, amount = what it had cost you"""
 
     __tablename__ = "stock_moves"
-    __table_args__ = (db.CheckConstraint("kind IN ('added', 'refill', 'sale', 'return', 'loss')", name="ck_stock_moves_kind"),)
+    __table_args__ = (db.CheckConstraint("kind IN ('added', 'refill', 'sale', 'return', 'loss', 'giveaway')", name="ck_stock_moves_kind"),)
 
     id = db.Column(db.Integer, primary_key=True)
     product_id = db.Column(db.Integer, db.ForeignKey("products.id", ondelete="SET NULL"), index=True)
@@ -337,6 +345,105 @@ class StockMove(db.Model):
     order_id = db.Column(db.Integer, db.ForeignKey("orders.id", ondelete="SET NULL"))
     created_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
     created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
+
+
+# ---------------------------------------------------------------- giveaways
+CODE_LETTERS = "ABCDEFGHJKMNPQRSTUVWXYZ"      # no I, L, O: they look like 1 and 0
+CODE_DIGITS = "23456789"                      # no 0 and 1
+CODE_CHARS = CODE_LETTERS + CODE_DIGITS
+
+
+def new_code():
+    """12 characters, letters mixed with numbers, e.g. "K7Q4MZ9XA2PD" (shown as K7Q-4MZ-9XA-2PD)."""
+    import secrets
+    while True:
+        code = "".join(secrets.choice(CODE_CHARS) for _ in range(12))
+        if any(c in CODE_LETTERS for c in code) and sum(c in CODE_DIGITS for c in code) >= 3:
+            return code
+
+
+def clean_code(value):
+    """What the customer reads out ("k7q 4mz-9xa 2pd") → "K7Q4MZ9XA2PD"."""
+    return "".join(c for c in (value or "").upper() if c.isalnum())[:12]
+
+
+def pretty_code(code):
+    return "-".join(code[i:i + 3] for i in range(0, len(code), 3))
+
+
+class Giveaway(TimestampMixin, db.Model):
+    """A prize (one product or an amount of money) won by random visitors of the website.
+    Each visitor is drawn once; one in `chance` visitors wins, until `winners` codes are given out."""
+
+    __tablename__ = "giveaways"
+    __table_args__ = (
+        db.CheckConstraint("prize IN ('product', 'money')", name="ck_giveaways_prize"),
+        db.CheckConstraint("winners > 0 AND chance > 0", name="ck_giveaways_numbers"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    prize = db.Column(db.String(8), nullable=False)                        # product | money
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id", ondelete="SET NULL"))
+    product_name = db.Column(db.String(200), nullable=False, default="")   # the name the winner sees
+    amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)       # money prize
+    winners = db.Column(db.Integer, nullable=False)                        # how many codes to give out
+    chance = db.Column(db.Integer, nullable=False)                         # 1 in this many visitors wins
+    starts_on = db.Column(db.Date, nullable=False)
+    ends_on = db.Column(db.Date, nullable=False)                           # last day
+    is_active = db.Column(db.Boolean, nullable=False, default=True)        # False = stopped early
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+
+    product = db.relationship("Product")
+    codes = db.relationship("GiveawayCode", back_populates="giveaway", order_by="GiveawayCode.id.desc()",
+                            cascade="all, delete-orphan", lazy="selectin")
+
+    @property
+    def given(self):
+        return len(self.codes)
+
+    @property
+    def claimed(self):
+        return sum(1 for c in self.codes if c.claimed_at)
+
+    @property
+    def status(self):
+        """live, upcoming, full (every code given), ended or stopped."""
+        day = local_today()
+        if not self.is_active:
+            return "stopped"
+        if day > self.ends_on:
+            return "ended"
+        if self.given >= self.winners:
+            return "full"
+        return "upcoming" if day < self.starts_on else "live"
+
+    @classmethod
+    def live(cls):
+        day = local_today()
+        rows = cls.query.filter(cls.is_active.is_(True), cls.starts_on <= day, cls.ends_on >= day).order_by(cls.id).all()
+        return [r for r in rows if r.given < r.winners]
+
+
+class GiveawayCode(db.Model):
+    """A winning code shown to one visitor. `claimed_at` is set when the prize is handed over."""
+
+    __tablename__ = "giveaway_codes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    giveaway_id = db.Column(db.Integer, db.ForeignKey("giveaways.id", ondelete="CASCADE"), nullable=False, index=True)
+    code = db.Column(db.String(12), unique=True, nullable=False)
+    visitor = db.Column(db.String(64), nullable=False, default="", index=True)   # hashed address: one win each
+    created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
+    claimed_at = db.Column(db.DateTime(timezone=True))
+    claimed_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    customer = db.Column(db.String(120), nullable=False, default="")     # who collected it
+    value = db.Column(db.Numeric(12, 2), nullable=False, default=0)      # what it cost the shop
+
+    giveaway = db.relationship("Giveaway", back_populates="codes")
+
+    @property
+    def pretty(self):
+        return pretty_code(self.code)
 
 
 class AuditLog(db.Model):

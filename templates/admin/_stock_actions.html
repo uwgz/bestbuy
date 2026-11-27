@@ -3,12 +3,15 @@
 {% set num = "%.2f" %}
 {% set data = {"id": p.id, "short": p.short, "sku": p.sku, "name": p.name, "category": p.category,
                "price": (num|format(p.price))|replace(".00", ""), "cost": (num|format(p.cost or 0))|replace(".00", ""),
-               "final": (num|format(p.final_price))|replace(".00", ""), "discount": p.discount, "badge": p.badge, "stock": p.stock,
+               "final": (num|format(p.final_price))|replace(".00", ""), "discount": p.discount if p.on_sale else 0, "until": p.discount_until.isoformat() if p.on_sale and p.discount_until else "", "badge": p.badge, "stock": p.stock,
                "description": p.description, "photos": p.photos|join("\n"), "is_active": p.is_active} %}
 {% set payload = data|tojson|forceescape %}
 <button type="button" data-dialog="sell" data-product='{{ payload }}' class="h-9 rounded-lg bg-brand px-3.5 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-40"{{ ' disabled title="Sold out: refill first"' if not p.stock }}>Sell</button>
 <button type="button" data-dialog="refill" data-product='{{ payload }}' class="{{ tb }}">Refill</button>
-<button type="button" data-dialog="media" data-product='{{ payload }}' class="{{ tb }}" title="Photos and discount">Photos &amp; %</button>
+<button type="button" data-dialog="media" data-product='{{ payload }}' class="{{ tb }}" title="Photos and label">Photos</button>
+<button type="button" data-dialog="discount" data-product='{{ payload }}' aria-label="Discount on {{ p.short }}"
+        title="{{ ('−' ~ p.discount ~ '% until ' ~ (p.discount_until.strftime('%b ') ~ p.discount_until.day if p.discount_until else 'no end date')) if p.on_sale else 'Give a discount' }}"
+        class="{{ ib }}{{ ' border-sale/50 bg-sale/10 text-sale hover:border-sale hover:text-sale dark:border-sale/50 dark:text-red-400' if p.on_sale }}">{{ icon("percent", "size-4") }}</button>
 <button type="button" data-dialog="product" data-product='{{ payload }}' class="{{ ib }}" aria-label="Edit {{ p.short }}" title="Edit">{{ icon("pencil", "size-4") }}</button>
 <form method="post" action="{{ url_for('admin.product_visibility', product_id=p.id) }}" class="contents">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="_back" value="{{ request.full_path }}">

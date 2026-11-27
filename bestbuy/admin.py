@@ -6,15 +6,13 @@ Orders and Giveaways show their page header until we design them.
 """
 import re
 import secrets
-from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from functools import wraps
-from zoneinfo import ZoneInfo
 
 from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, session, url_for
 
 from .extensions import db
-from .models import AuditLog, Order, Product, User, utcnow
+from .models import AuditLog, Order, Product, User, local_today, utcnow
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -150,7 +148,7 @@ def _layout():
 
 
 def today():
-    return datetime.now(ZoneInfo(current_app.config.get("TIMEZONE", "Africa/Kigali"))).date()
+    return local_today()
 
 
 def _back(default):
@@ -197,11 +195,5 @@ def orders():
     return _page("Orders", "Sales made in the shop and orders sent from the website.", "receipt")
 
 
-@bp.route("/giveaways")
-@login_required
-def giveaways():
-    return _page("Giveaways", "A random visitor wins a prize; check their code here.", "gift", button="Start a giveaway")
-
-
 # the pages live in their own files; importing them adds their routes to this blueprint
-from . import admin_dashboard, admin_settings, admin_stock  # noqa: E402,F401
+from . import admin_dashboard, admin_giveaways, admin_settings, admin_stock  # noqa: E402,F401

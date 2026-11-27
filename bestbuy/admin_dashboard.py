@@ -57,11 +57,12 @@ def dashboard():
 
     sales, cogs = money("sale"), cost_of("sale")
     refunds, returned_cost = money("return"), cost_of("return")
-    losses = money("loss")
+    losses, gifts = money("loss"), money("giveaway")
     flow = {
         "sales": sales, "units_sold": units("sale"), "orders": len(by_kind["sale"]),
         "bought": money("added") + money("refill"), "units_bought": units("added") + units("refill"),
-        "profit": sales - cogs - losses - refunds + returned_cost,
+        "profit": sales - cogs - losses - refunds + returned_cost - gifts,
+        "gifts": gifts, "prizes": len(by_kind["giveaway"]),
         "losses": losses, "units_lost": units("loss"), "refunds": refunds, "units_returned": units("return"),
     }
     flow["margin"] = round(flow["profit"] / sales * 100) if sales else 0

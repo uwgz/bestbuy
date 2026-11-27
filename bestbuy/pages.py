@@ -1,10 +1,14 @@
 """The public pages. Everything they show comes from the database."""
+import hashlib
+import secrets
 from urllib.parse import quote
 
-from flask import abort, render_template, request, url_for
+from flask import abort, current_app, jsonify, render_template, request, session, url_for
+from sqlalchemy.exc import IntegrityError
 
+from .extensions import db
 from .icons import icon
-from .models import Category, HeroSlide, PortfolioItem, Product, Service, Setting
+from .models import Category, Giveaway, GiveawayCode, HeroSlide, PortfolioItem, Product, Service, Setting, new_code
 
 SORTS = {"featured": "Featured", "price-asc": "Price: low to high", "price-desc": "Price: high to low", "name": "Name"}
 FEATURED_BADGES = ("New", "Best seller", "Pro pick")
@@ -44,6 +48,52 @@ def _section(endpoint):
     return "devices" if endpoint in ("shop", "product", "cart") else "photo" if endpoint == "studio" else ""
 
 
+# ---------------------------------------------------------------- giveaway draw
+def giveaway_on():
+    """The giveaways running today, as "3,4" ("" = none). The page asks for a draw only when one is new to it."""
+    return ",".join(str(gw.id) for gw in Giveaway.live())
+
+
+def _visitor():
+    """The visitor's internet address, hashed: one win per address and giveaway, nothing personal kept."""
+    address = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip()
+    return hashlib.sha256(f"{current_app.secret_key}|{address}".encode()).hexdigest()[:32]
+
+
+def draw():
+    """Each visitor is drawn once per giveaway; one in `chance` wins a code while codes are left."""
+    drawn = list(session.get("giveaways_drawn", []))
+    visitor = _visitor()
+    for gw in Giveaway.live():
+        if gw.id in drawn:
+            continue
+        drawn.append(gw.id)
+        if GiveawayCode.query.filter_by(giveaway_id=gw.id, visitor=visitor).first():
+            continue                                    # this address already won this one
+        if secrets.randbelow(gw.chance) != 0:
+            continue
+        locked = db.session.query(Giveaway).filter_by(id=gw.id).with_for_update().one()   # two winners at once
+        if GiveawayCode.query.filter_by(giveaway_id=gw.id).count() >= locked.winners:
+            db.session.rollback()
+            continue
+        for _ in range(5):
+            try:
+                row = GiveawayCode(giveaway_id=gw.id, code=new_code(), visitor=visitor)
+                db.session.add(row)
+                db.session.commit()
+                break
+            except IntegrityError:                      # the same code twice: try another
+                db.session.rollback()
+        else:
+            continue
+        session["giveaways_drawn"] = drawn[-50:]
+        session.permanent = True
+        return row
+    session["giveaways_drawn"] = drawn[-50:]
+    session.permanent = True
+    return None
+
+
 # ---------------------------------------------------------------- pages
 def init_app(app):
     app.jinja_env.filters["overview"] = overview
@@ -51,7 +101,24 @@ def init_app(app):
     @app.context_processor
     def _globals():
         return {"store": Setting.store(), "categories": Category.as_dict(), "icon": icon, "money": money,
-                "whatsapp_link": whatsapp_link, "nav_section": _section(request.endpoint)}
+                "whatsapp_link": whatsapp_link, "nav_section": _section(request.endpoint), "giveaway_on": giveaway_on}
+
+    @app.route("/giveaway/draw", methods=["POST"])
+    def giveaway_draw():
+        if request.headers.get("X-Requested-With") != "fetch":      # only the page's own script
+            abort(400)
+        won = draw()
+        if not won:
+            return jsonify(won=False)
+        gw, store = won.giveaway, Setting.store()
+        ends = f"{gw.ends_on:%A, %B} {gw.ends_on.day}"
+        if gw.prize == "product":
+            prize = {"kind": "product", "name": gw.product_name,
+                     "url": url_for("shop", q=gw.product.short if gw.product else gw.product_name)}
+        else:
+            prize = {"kind": "money", "name": money(gw.amount), "url": ""}
+        message = f'Hello {store["name"]}! I won the website giveaway ({prize["name"]}). My code is {won.pretty}.'
+        return jsonify(won=True, code=won.pretty, prize=prize, ends=ends, whatsapp=whatsapp_link(message) if store["whatsapp"] else "")
 
     @app.route("/")
     def home():

@@ -5,7 +5,8 @@ Stock (/admin/stock): products and every change to their units.
     Return / loss     a customer brought something back, or units were damaged / lost
     Sell              a sale in the shop (an order, paid)
     Refill            more units of the same product bought
-    Photos & discount pictures, discount % and its label (filled in later)
+    Photos            pictures and the label on the photo (filled in later)
+    %                 discount: how much off and its last day
     Edit              name, category, prices, description
     Hide / show       take it off the shop or put it back
 Each change to units is written to StockMove, which the dashboard counts.
@@ -143,7 +144,7 @@ def product_edit(product_id):
 @bp.route("/stock/<int:product_id>/media", methods=["POST"])
 @login_required
 def product_media(product_id):
-    """Photos, discount and its label: filled in later, so they may be empty."""
+    """Photos and the label on the photo: filled in later, so they may be empty."""
     product = _product_or_404(product_id)
     f = request.form
     try:
@@ -151,12 +152,36 @@ def product_media(product_id):
         for url in photos:
             if not (url.startswith("https://") or url.startswith("/static/")):
                 raise FormError("Photo links must start with https:// (one link per line).")
-        product.discount = whole(f.get("discount") or 0, "Discount", 0, 90)
         product.badge = text(f, "badge", "the label", required=False, limit=32)
         if [p.url for p in product.photo_rows] != photos:
             product.photo_rows = [ProductPhoto(url=url, position=k) for k, url in enumerate(photos)]
-        audit("product.media", f"{product.sku}: {len(photos)} photos, {product.discount}% off")
-        return _done(f"{product.short}: photos and discount saved.")
+        audit("product.media", f"{product.sku}: {len(photos)} photos, label {product.badge!r}")
+        return _done(f"{product.short}: photos saved.")
+    except FormError as e:
+        return _failed(e)
+
+
+@bp.route("/stock/<int:product_id>/discount", methods=["POST"])
+@login_required
+def product_discount(product_id):
+    """How much off (%) and the last day of the discount. 0% ends it now."""
+    product = _product_or_404(product_id)
+    f = request.form
+    try:
+        percent = whole(f.get("discount"), "Discount", 0, 90)
+        if percent == 0:
+            product.discount, product.discount_until = 0, None
+            audit("product.discount", f"{product.sku}: ended")
+            return _done(f"{product.short}: discount ended.")
+        try:
+            until = date.fromisoformat(f.get("until", ""))
+        except ValueError:
+            raise FormError("Choose the last day of the discount.")
+        if until < today():
+            raise FormError("The last day of the discount can't be in the past.")
+        product.discount, product.discount_until = percent, until
+        audit("product.discount", f"{product.sku}: {percent}% until {until}")
+        return _done(f"{product.short}: {percent}% off until {until:%b} {until.day}. New price {product.final_price:,.0f}.")
     except FormError as e:
         return _failed(e)
 
@@ -196,7 +221,12 @@ def product_refill(product_id):
     f = request.form
     try:
         qty = whole(f.get("qty"), "How many arrived", 1, 100000)
-        unit_cost = amount(f.get("cost"), "Buying price each")
+        if (f.get("cost") or "").strip():
+            unit_cost = amount(f.get("cost"), "Buying price each")
+        elif product.cost:
+            unit_cost = Decimal(product.cost)              # left empty: the same price as before
+        else:
+            raise FormError("Buying price each: enter what one unit cost you.")
         day = _day(f)
         old_units = max(product.stock, 0)
         product.cost = ((Decimal(product.cost) * old_units + unit_cost * qty) / (old_units + qty)).quantize(Decimal("0.01"))

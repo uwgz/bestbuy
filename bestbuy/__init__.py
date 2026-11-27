@@ -32,6 +32,7 @@ def create_app(overrides=None):
         _move_old_site_tables()
         db.create_all()                      # makes any missing tables; never changes existing ones
         _add_new_columns()
+        _update_checks()
         if app.config.get("AUTO_LOAD_DEMO"):
             _load_demo_if_empty()
     return app
@@ -70,6 +71,7 @@ def _move_old_site_tables():
 NEW_COLUMNS = [
     ("products", "cost", "NUMERIC(12, 2) NOT NULL DEFAULT 0"),
     ("order_items", "unit_cost", "NUMERIC(12, 2) NOT NULL DEFAULT 0"),
+    ("products", "discount_until", "DATE"),
 ]
 
 
@@ -84,6 +86,28 @@ def _add_new_columns():
                     conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {column} {kind}'))
             except Exception:            # another server added it at the same moment
                 pass
+
+
+# Rules (CHECK constraints) that grew after their table was made: (table, name, rule)
+CHECKS = [
+    ("stock_moves", "ck_stock_moves_kind", "kind IN ('added', 'refill', 'sale', 'return', 'loss', 'giveaway')"),
+]
+
+
+def _update_checks():
+    """Replace a rule on an existing PostgreSQL table when it was widened (e.g. a new kind of stock move)."""
+    if db.engine.dialect.name != "postgresql":
+        return
+    from sqlalchemy import text
+    for table, name, rule in CHECKS:
+        try:
+            with db.engine.begin() as conn:
+                current = conn.execute(text("SELECT pg_get_constraintdef(oid) FROM pg_constraint WHERE conname = :n"), {"n": name}).scalar()
+                if current and "giveaway" not in current:
+                    conn.execute(text(f"ALTER TABLE {table} DROP CONSTRAINT {name}"))
+                    conn.execute(text(f"ALTER TABLE {table} ADD CONSTRAINT {name} CHECK ({rule})"))
+        except Exception:                # another server changed it at the same moment
+            pass
 
 
 def _load_demo_if_empty():

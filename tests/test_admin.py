@@ -5,7 +5,7 @@ import pytest
 
 from bestbuy.extensions import db
 from bestbuy.admin import today
-from bestbuy.models import AuditLog, Order, Product, Setting, StockMove, User
+from bestbuy.models import AuditLog, Giveaway, GiveawayCode, Order, Product, Setting, StockMove, User
 
 
 def _token(client, url="/admin/login"):
@@ -101,8 +101,13 @@ def test_refill_averages_the_buying_price(owner):
     assert p.stock == 10 and p.cost == 130000                                  # (7×100k + 3×200k) / 10
     move = StockMove.query.filter_by(kind="refill").one()
     assert move.qty == 3 and move.amount == 600000
-    post(owner, f"/admin/stock/{p.id}/refill", qty="3", day=today().isoformat())   # no buying price: refused
-    assert db.session.get(Product, p.id).stock == 10
+    post(owner, f"/admin/stock/{p.id}/refill", qty="2", cost="", day=today().isoformat())   # empty: same price as now
+    p = db.session.get(Product, p.id)
+    assert p.stock == 12 and p.cost == 130000
+    assert StockMove.query.filter_by(kind="refill").order_by(StockMove.id.desc()).first().amount == 260000
+    p.cost = 0; db.session.commit()
+    post(owner, f"/admin/stock/{p.id}/refill", qty="1", cost="", day=today().isoformat())   # no price known yet: refused
+    assert db.session.get(Product, p.id).stock == 12
 
 
 def test_hide_and_show(owner):
@@ -130,14 +135,13 @@ def test_add_edit_and_photos(owner):
     p = db.session.get(Product, p.id)
     assert p.short == "ZV-E10" and p.price == 650000 and p.sku.startswith("LNS-") and p.stock == 3   # edit never changes units
 
-    post(owner, f"/admin/stock/{p.id}/media", photos="https://images.unsplash.com/photo-1\nhttps://images.unsplash.com/photo-2",
-         discount="10", badge="New")
+    post(owner, f"/admin/stock/{p.id}/media", photos="https://images.unsplash.com/photo-1\nhttps://images.unsplash.com/photo-2", badge="New")
     p = db.session.get(Product, p.id)
-    assert len(p.photos) == 2 and p.final_price == 585000 and p.badge == "New"
-    post(owner, f"/admin/stock/{p.id}/media", photos="", discount="0", badge="")       # photos and discount may be empty
+    assert len(p.photos) == 2 and p.badge == "New"
+    post(owner, f"/admin/stock/{p.id}/media", photos="", badge="")                    # photos and label may be empty
     p = db.session.get(Product, p.id)
-    assert p.photos == [] and not p.on_sale and p.badge == ""
-    post(owner, f"/admin/stock/{p.id}/media", photos="http://not-secure.example/x.jpg", discount="0")
+    assert p.photos == [] and p.badge == ""
+    post(owner, f"/admin/stock/{p.id}/media", photos="http://not-secure.example/x.jpg")
     assert "https://" in owner.get("/admin/stock").get_data(as_text=True)
 
 
@@ -192,3 +196,89 @@ def test_settings(owner):
     assert db.session.get(Setting, "hours_week").value == "08:00-19:00"        # closing before opening: refused
     post(owner, "/admin/settings/contact", phone="", whatsapp="250788123456", email="hi@shop.rw")
     assert db.session.get(Setting, "phone").value == "+250 788 123 456"        # phone required
+
+
+def test_discount_needs_a_last_day_and_ends_by_itself(owner):
+    p = Product.query.filter_by(slug="canon-ef-50mm-f1-8-stm").one()
+    price = p.price
+    post(owner, f"/admin/stock/{p.id}/discount", discount="10")                          # no last day: refused
+    assert not db.session.get(Product, p.id).on_sale
+    post(owner, f"/admin/stock/{p.id}/discount", discount="10", until=(today() - timedelta(days=1)).isoformat())
+    assert not db.session.get(Product, p.id).on_sale                                     # last day in the past: refused
+    post(owner, f"/admin/stock/{p.id}/discount", discount="10", until=today().isoformat())
+    p = db.session.get(Product, p.id)
+    assert p.on_sale and p.final_price == price * 9 / 10                                 # still on sale on its last day
+    assert "offer ends" in owner.get(f"/product/{p.slug}").get_data(as_text=True)
+    p.discount_until = today() - timedelta(days=1); db.session.commit()                  # the day after: normal price
+    assert not p.on_sale and p.final_price == price
+    post(owner, f"/admin/stock/{p.id}/discount", discount="0")                           # 0 ends it now
+    p = db.session.get(Product, p.id)
+    assert p.discount == 0 and p.discount_until is None
+
+
+# ---------------------------------------------------------------- giveaways
+def start_giveaway(c, **extra):
+    p = Product.query.filter_by(slug="canon-ef-50mm-f1-8-stm").one()          # 7 in stock
+    form = {"prize": "product", "product_id": str(p.id), "winners": "2", "chance": "1",
+            "starts_on": today().isoformat(), "ends_on": (today() + timedelta(days=7)).isoformat(), **extra}
+    post(c, "/admin/giveaways/new", **form)
+    return p
+
+
+def draw(c):
+    return c.post("/giveaway/draw", headers={"X-Requested-With": "fetch"}).get_json()
+
+
+def test_giveaway_needs_every_field(owner):
+    start_giveaway(owner, prize="")
+    start_giveaway(owner, product_id="")
+    start_giveaway(owner, winners="50")                                          # more winners than units in stock
+    start_giveaway(owner, prize="money", amount="")
+    start_giveaway(owner, ends_on=(today() - timedelta(days=1)).isoformat())
+    assert Giveaway.query.count() == 0
+    start_giveaway(owner, prize="money", amount="50,000", product_id="")
+    gw = Giveaway.query.one()
+    assert gw.prize == "money" and gw.amount == 50000 and gw.status == "live"
+
+
+def test_visitor_wins_a_code_once(owner, app):
+    start_giveaway(owner)                                                        # 1 in 1: every visitor wins
+    visitor = app.test_client()
+    page = visitor.get("/").get_data(as_text=True)
+    assert 'data-giveaways="' + str(Giveaway.query.one().id) + '"' in page
+    won = draw(visitor)
+    assert won["won"] and re.fullmatch(r"[A-Z2-9]{3}(-[A-Z2-9]{3}){3}", won["code"])
+    assert won["prize"]["name"].startswith("Canon") and "/shop?q=" in won["prize"]["url"]
+    assert not draw(visitor)["won"]                                              # drawn once per giveaway
+    assert not draw(app.test_client())["won"]                                    # same address: one win
+    assert GiveawayCode.query.count() == 1
+    assert visitor.post("/giveaway/draw").status_code == 400                     # only the page's own script
+
+
+def test_check_and_give_the_prize(owner, app):
+    p = start_giveaway(owner)
+    code = draw(app.test_client())["code"]
+    html = owner.get("/admin/giveaways?code=" + code.lower().replace("-", " ")).get_data(as_text=True)
+    assert "Real code" in html
+    assert "Not a real code" in owner.get("/admin/giveaways?code=AAA-222-BBB-333").get_data(as_text=True)
+    post(owner, "/admin/giveaways/claim", code=code, customer="")                 # name required
+    assert db.session.get(Product, p.id).stock == 7
+    post(owner, "/admin/giveaways/claim", code=code, customer="Aline")
+    assert db.session.get(Product, p.id).stock == 6
+    move = StockMove.query.filter_by(kind="giveaway").one()
+    assert move.qty == -1 and move.amount == p.cost
+    assert "Already collected" in owner.get("/admin/giveaways?code=" + code).get_data(as_text=True)
+    post(owner, "/admin/giveaways/claim", code=code, customer="Someone else")     # not twice
+    assert db.session.get(Product, p.id).stock == 6
+    assert "Losses, returns &amp; gifts" in owner.get("/admin/").get_data(as_text=True)
+
+
+def test_no_new_winners_when_stopped_or_full(owner, app):
+    start_giveaway(owner, winners="1")
+    gw = Giveaway.query.one()
+    post(owner, f"/admin/giveaways/{gw.id}/stop")
+    assert not draw(app.test_client())["won"]
+    post(owner, f"/admin/giveaways/{gw.id}/stop")                                # resume
+    gw.codes.append(GiveawayCode(code="ABC234DEF567", visitor="someone")); db.session.commit()
+    assert db.session.get(Giveaway, gw.id).status == "full"
+    assert not draw(app.test_client())["won"]

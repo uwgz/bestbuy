@@ -26,13 +26,13 @@
 
 {# products #}
 <div class="mt-5 overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
-  <div class="hidden grid-cols-[minmax(0,1fr)_130px_100px_340px] gap-4 border-b border-zinc-200 bg-zinc-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 md:grid dark:border-zinc-800 dark:bg-white/[.03] dark:text-zinc-400">
+  <div class="hidden grid-cols-[minmax(0,1fr)_150px_100px_350px] gap-4 border-b border-zinc-200 bg-zinc-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 md:grid dark:border-zinc-800 dark:bg-white/[.03] dark:text-zinc-400">
     <span>Product</span><span>Price</span><span>In stock</span><span class="text-right">Actions</span>
   </div>
   <ul class="divide-y divide-zinc-200 dark:divide-zinc-800">
     {% if not items %}<li class="px-5 py-12 text-center text-zinc-500">No products here yet.</li>{% endif %}
     {% for p in items %}
-      <li class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 px-4 py-3.5 sm:px-5 md:grid-cols-[minmax(0,1fr)_130px_100px_340px]">
+      <li class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 px-4 py-3.5 sm:px-5 md:grid-cols-[minmax(0,1fr)_150px_100px_350px]">
         <div class="flex min-w-0 items-center gap-3.5">
           <span class="relative size-12 shrink-0 overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800">
             <span class="absolute inset-0 grid place-items-center text-zinc-400">{{ icon(p.icon, "size-5") }}</span>
@@ -44,7 +44,7 @@
           </div>
         </div>
         <div class="text-right md:text-left">
-          {% if p.on_sale %}<p class="font-semibold text-sale">{{ money(p.final_price) }}</p><p class="text-xs text-zinc-400"><s>{{ money(p.price) }}</s> · −{{ p.discount }}%</p>
+          {% if p.on_sale %}<p class="font-semibold text-sale">{{ money(p.final_price) }}</p><p class="whitespace-nowrap text-xs text-zinc-400"><s>{{ money(p.price) }}</s> · −{{ p.discount }}%</p>{% if p.discount_until %}<p class="whitespace-nowrap text-xs text-zinc-400">until {{ p.discount_until.strftime("%b") }} {{ p.discount_until.day }}</p>{% endif %}
           {% else %}<p class="font-semibold">{{ money(p.price) }}</p>{% endif %}
         </div>
         <div class="col-span-2 flex flex-wrap items-center gap-x-3 gap-y-2.5 md:col-span-1 md:block">
@@ -59,7 +59,7 @@
     {% endfor %}
   </ul>
 </div>
-<p class="mt-4 text-[13px] text-zinc-500 dark:text-zinc-400"><b class="text-zinc-700 dark:text-zinc-300">Sell</b> records a sale · <b class="text-zinc-700 dark:text-zinc-300">Refill</b> adds units you bought · <b class="text-zinc-700 dark:text-zinc-300">Photos &amp; %</b> sets the pictures and discount · the eye hides or shows a product in the shop.</p>
+<p class="mt-4 text-[13px] text-zinc-500 dark:text-zinc-400"><b class="text-zinc-700 dark:text-zinc-300">Sell</b> records a sale · <b class="text-zinc-700 dark:text-zinc-300">Refill</b> adds units you bought · <b class="text-zinc-700 dark:text-zinc-300">Photos</b> sets the pictures · <b class="text-zinc-700 dark:text-zinc-300">%</b> gives a discount until a date · the eye hides or shows a product in the shop.</p>
 {% endblock %}
 
 {% block dialogs %}
@@ -109,9 +109,10 @@
     <div class="space-y-4 px-5 py-5">
       <div class="grid grid-cols-2 gap-3">
         <label class="{{ lbl }}">How many arrived<input name="qty" type="number" min="1" value="1" required inputmode="numeric" class="{{ fld }}" data-qty></label>
-        <label class="{{ lbl }}">Buying price each ({{ store.currency }})<input name="cost" required inputmode="decimal" class="{{ fld }}" data-cost></label>
+        <label class="{{ lbl }}">Buying price each ({{ store.currency }})<input name="cost" inputmode="decimal" class="{{ fld }}" data-cost></label>
       </div>
       <label class="{{ lbl }}">Date<input name="day" type="date" value="{{ today }}" max="{{ today }}" required class="{{ fld }}"></label>
+      <p class="-mt-1 text-sm text-zinc-500 dark:text-zinc-400" data-cost-note></p>
       <p class="flex items-baseline justify-between rounded-xl bg-zinc-100 px-4 py-3 dark:bg-white/5">
         <span class="text-sm text-zinc-500 dark:text-zinc-400" data-stock-note></span>
         <span class="text-sm">You paid <b class="ml-1 text-lg tabular-nums" data-total>—</b></span>
@@ -124,15 +125,30 @@
 {# Photos and discount: filled in later, so they may stay empty #}
 <dialog id="dlg-media" class="{{ dlg }}" data-action="{{ url_for('admin.product_media', product_id=0) }}">
   <form method="post">{{ hidden_fields }}
-    {{ head("Photos & discount") }}
+    {{ head("Photos") }}
     <div class="space-y-4 px-5 py-5">
       <label class="{{ lbl }}">Photos <span class="font-normal text-zinc-400">(one link per line; the first is the cover)</span>
         <textarea name="photos" rows="4" class="{{ fld }} font-mono text-[13px]" placeholder="https://images.unsplash.com/photo-…"></textarea></label>
+      <label class="{{ lbl }}">Label on the photo <span class="font-normal text-zinc-400">(leave empty for none)</span><input name="badge" maxlength="32" class="{{ fld }}" placeholder="New, Best seller, Refurbished"></label>
+    </div>
+    {{ foot("Save") }}
+  </form>
+</dialog>
+
+{# Discount: how much off and until when #}
+<dialog id="dlg-discount" class="{{ dlg }}" data-action="{{ url_for('admin.product_discount', product_id=0) }}">
+  <form method="post">{{ hidden_fields }}
+    {{ head("Discount") }}
+    <div class="space-y-4 px-5 py-5">
       <div class="grid grid-cols-2 gap-3">
-        <label class="{{ lbl }}">Discount (%)<input name="discount" type="number" min="0" max="90" value="0" required class="{{ fld }}"></label>
-        <label class="{{ lbl }}">Label on the photo<input name="badge" maxlength="32" class="{{ fld }}" placeholder="New, Best seller, Deal"></label>
+        <label class="{{ lbl }}">Discount (%)<input name="discount" type="number" min="0" max="90" required inputmode="numeric" class="{{ fld }}" placeholder="10" data-percent></label>
+        <label class="{{ lbl }}">Last day<input name="until" type="date" min="{{ today }}" required class="{{ fld }}" data-until></label>
       </div>
-      <p class="text-sm text-zinc-500 dark:text-zinc-400">0% = no sale. Leave the label empty for none.</p>
+      <p class="flex items-baseline justify-between rounded-xl bg-zinc-100 px-4 py-3 dark:bg-white/5">
+        <span class="text-sm text-zinc-500 dark:text-zinc-400">Was <s data-was></s></span>
+        <span class="text-sm">New price <b class="ml-1 text-lg tabular-nums text-sale" data-total>—</b></span>
+      </p>
+      <p class="text-sm text-zinc-500 dark:text-zinc-400" data-discount-note>After the last day the normal price comes back by itself. Put 0 to end it now.</p>
     </div>
     {{ foot("Save") }}
   </form>
@@ -210,7 +226,7 @@
           form.action = dlg.dataset.add;
           qs(dlg, "[data-refund]").hidden = true;
         } else {
-          const titles = { sell: "Sell", refill: "Refill", media: "Photos & discount:" };
+          const titles = { sell: "Sell", refill: "Refill", media: "Photos:", discount: "Discount on" };
           qs(dlg, "[data-title]").textContent = `${titles[kind]} ${p.short}`;
           const note = qs(dlg, "[data-stock-note]");
           if (note) note.textContent = `${p.sku} · ${p.stock} in stock`;
@@ -219,8 +235,25 @@
             qs(dlg, "[data-qty]").max = Math.max(p.stock, 1);
             dlg.oninput = () => totalOf(dlg, "[data-price]");
           }
-          if (kind === "refill") { qs(dlg, "[data-cost]").value = p.cost !== "0" ? p.cost : ""; dlg.oninput = () => totalOf(dlg, "[data-cost]"); }
-          if (kind === "media") { form.elements.photos.value = p.photos; form.elements.discount.value = p.discount; form.elements.badge.value = p.badge; }
+          if (kind === "refill") {
+            // empty = the same buying price as now (shown as the placeholder)
+            const cost = qs(dlg, "[data-cost]"), known = num(p.cost) > 0;
+            cost.value = ""; cost.required = !known;
+            cost.placeholder = known ? Number(p.cost).toLocaleString("en-US") : "What one unit cost you";
+            qs(dlg, "[data-cost-note]").textContent = known ? "Leave the buying price empty if it's the same as last time." : "";
+            dlg.oninput = () => { const t = num(qs(dlg, "[data-qty]").value) * (num(cost.value) || num(p.cost)); qs(dlg, "[data-total]").textContent = t > 0 ? fmt(t) : "—"; };
+          }
+          if (kind === "media") { form.elements.photos.value = p.photos; form.elements.badge.value = p.badge; }
+          if (kind === "discount") {
+            const pct = qs(dlg, "[data-percent]"), until = qs(dlg, "[data-until]");
+            pct.value = p.discount || ""; until.value = p.until;
+            qs(dlg, "[data-was]").textContent = fmt(p.price);
+            dlg.oninput = () => {
+              const n = num(pct.value), off = pct.value !== "" && n === 0;
+              until.required = !off; until.disabled = off;              // 0% ends the discount: no date needed
+              qs(dlg, "[data-total]").textContent = n > 0 && n <= 90 ? fmt(Math.round(num(p.price) * (100 - n) / 100)) : off ? "Normal price" : "—";
+            };
+          }
           dlg.oninput && dlg.oninput();
         }
         dlg.showModal();

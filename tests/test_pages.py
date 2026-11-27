@@ -114,3 +114,8 @@ def test_neon_address_uses_psycopg(monkeypatch):
     url = config.database_url()
     assert url == "postgresql+psycopg://u:p@ep-x-pooler.neon.tech/neondb?sslmode=require"
     assert config.engine_options(url)["connect_args"] == {"prepare_threshold": None}
+
+
+def test_footer_links_to_admin_sign_in(client):
+    assert 'href="/admin/"' in client.get("/").get_data(as_text=True)
+    assert "/admin/setup" in client.get("/admin/").headers["Location"]     # signed out: setup or sign-in page

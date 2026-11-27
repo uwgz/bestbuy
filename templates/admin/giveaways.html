@@ -1,0 +1,206 @@
+{% extends "admin/base.html" %}
+{% block title %}Giveaways{% endblock %}
+{% block crumb %}Giveaways{% endblock %}
+{% set card = "rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900" %}
+{% set muted = "text-zinc-500 dark:text-zinc-400" %}
+{% macro day(d) %}{{ d.strftime("%b") }} {{ d.day }}{% endmacro %}
+{% macro prize_name(gw) %}{{ gw.product_name if gw.prize == "product" else money(gw.amount) ~ " cash" }}{% endmacro %}
+{% set states = {"live": ("Running", "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"), "upcoming": ("Not started", "bg-brand/10 text-brand"),
+                 "full": ("All codes won", "bg-violet-500/12 text-violet-700 dark:text-violet-400"), "ended": ("Ended", "bg-zinc-200 text-zinc-600 dark:bg-white/10 dark:text-zinc-400"),
+                 "stopped": ("Stopped", "bg-amber-500/15 text-amber-700 dark:text-amber-400")} %}
+
+{% block content %}
+<div class="flex flex-wrap items-start justify-between gap-4">
+  <div>
+    <h1 class="text-[28px] leading-tight">Giveaways</h1>
+    <p class="mt-1 text-[15px] {{ muted }}">Random website visitors win a prize code; check the code when they come to collect.</p>
+  </div>
+  <div class="flex gap-2">
+    <button type="button" data-dialog="check" class="inline-flex h-11 items-center gap-2 rounded-xl border border-zinc-300 px-4 text-[15px] font-medium hover:border-zinc-500 dark:border-zinc-700 dark:hover:border-zinc-500">{{ icon("search", "size-4") }} Check a code</button>
+    <button type="button" data-dialog="new" class="btn h-11 rounded-xl px-4">{{ icon("plus", "size-4") }} New giveaway</button>
+  </div>
+</div>
+
+{# ---------- result of "Check a code" ---------- #}
+{% if checked %}
+  {% if not found %}
+    <section class="mt-6 flex items-start gap-4 rounded-2xl border border-red-300 bg-red-50 p-5 dark:border-red-500/40 dark:bg-red-500/10">
+      <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-red-500/15 text-red-600 dark:text-red-400">{{ icon("x", "size-6") }}</span>
+      <div><p class="font-mono text-lg font-semibold tracking-wider">{{ checked }}</p>
+        <p class="mt-0.5 font-semibold text-red-700 dark:text-red-400">Not a real code. The website never gave it out.</p>
+        <p class="mt-1 text-sm {{ muted }}">Ask the customer to read it again: codes have 12 letters and numbers in groups of 3.</p></div>
+    </section>
+  {% elif found.claimed_at %}
+    <section class="mt-6 flex items-start gap-4 rounded-2xl border border-amber-300 bg-amber-50 p-5 dark:border-amber-500/40 dark:bg-amber-500/10">
+      <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-amber-500/15 text-amber-700 dark:text-amber-400">{{ icon("check", "size-6") }}</span>
+      <div><p class="font-mono text-lg font-semibold tracking-wider">{{ found.pretty }}</p>
+        <p class="mt-0.5 font-semibold text-amber-700 dark:text-amber-400">Already collected: don't give it again.</p>
+        <p class="mt-1 text-sm {{ muted }}">{{ prize_name(found.giveaway) }} · given to {{ found.customer }} on {{ day(found.claimed_at) }}.</p></div>
+    </section>
+  {% else %}
+    {% set gw = found.giveaway %}
+    <section class="mt-6 rounded-2xl border border-emerald-300 bg-emerald-50 p-5 dark:border-emerald-500/40 dark:bg-emerald-500/10">
+      <div class="flex items-start gap-4">
+        <span class="grid size-11 shrink-0 place-items-center rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">{{ icon("check", "size-6") }}</span>
+        <div class="min-w-0 flex-1"><p class="font-mono text-lg font-semibold tracking-wider">{{ found.pretty }}</p>
+          <p class="mt-0.5 font-semibold text-emerald-700 dark:text-emerald-400">Real code: the prize was not collected yet.</p>
+          <p class="mt-1 text-sm {{ muted }}">Prize: <b class="text-zinc-800 dark:text-zinc-200">{{ prize_name(gw) }}</b> · won on {{ day(found.created_at) }}
+            {%- if gw.prize == "product" and gw.product %} · {{ gw.product.stock }} in stock{% endif %}</p></div>
+      </div>
+      <form method="post" action="{{ url_for('admin.giveaway_claim') }}" class="mt-4 flex flex-wrap items-end gap-3 sm:pl-15">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="code" value="{{ found.code }}">
+        <label class="min-w-56 flex-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">Winner's name or phone
+          <input name="customer" required maxlength="120" class="field mt-1.5 rounded-lg bg-white py-2 dark:bg-zinc-900" placeholder="Aline · 0788 123 456"></label>
+        <button class="h-[42px] rounded-lg bg-emerald-600 px-5 text-[15px] font-semibold text-white hover:bg-emerald-700" data-submit>{{ icon("gift", "mr-1.5 inline size-4") }}Give the prize</button>
+      </form>
+    </section>
+  {% endif %}
+{% endif %}
+
+{# ---------- the giveaways ---------- #}
+<div class="mt-6 space-y-4">
+  {% for gw in rows %}
+    {% set st = states[gw.status] %}
+    <section class="{{ card }}">
+      <div class="flex flex-wrap items-center gap-4 p-5">
+        <span class="relative size-14 shrink-0 overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800">
+          {% if gw.prize == "product" and gw.product %}
+            <span class="absolute inset-0 grid place-items-center text-zinc-400">{{ icon(gw.product.icon, "size-6") }}</span>
+            <img src="{{ gw.product.image }}" alt="" loading="lazy" onerror="this.remove()" class="relative size-full object-cover">
+          {% else %}<span class="absolute inset-0 grid place-items-center bg-emerald-500/12 text-lg font-bold text-emerald-700 dark:text-emerald-400">{{ store.currency }}</span>{% endif %}
+        </span>
+        <div class="min-w-0 flex-1">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="truncate text-[17px] font-semibold">{{ prize_name(gw) }}</h2>
+            <span class="rounded-full px-2.5 py-0.5 text-xs font-semibold {{ st[1] }}">{{ st[0] }}</span>
+          </div>
+          <p class="mt-1 text-sm {{ muted }}">{{ day(gw.starts_on) }} – {{ day(gw.ends_on) }} · 1 in {{ "{:,}".format(gw.chance) }} visitors wins</p>
+        </div>
+        <div class="w-full sm:w-56">
+          <div class="flex justify-between text-sm"><span><b class="tabular-nums">{{ gw.given }}</b> of {{ gw.winners }} won</span><span class="tabular-nums {{ muted }}">{{ gw.claimed }} collected</span></div>
+          <div class="mt-1.5 h-2 overflow-hidden rounded-full bg-zinc-100 dark:bg-white/[.06]">
+            <div class="h-full rounded-full bg-brand" style="width: {{ (gw.given / gw.winners * 100)|round }}%"></div>
+          </div>
+        </div>
+        {% if gw.status in ("live", "upcoming", "full", "stopped") %}
+          <form method="post" action="{{ url_for('admin.giveaway_stop', giveaway_id=gw.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button class="h-9 rounded-lg border border-zinc-200 px-3 text-sm font-medium hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-500">{{ "Resume" if gw.status == "stopped" else "Stop" }}</button>
+          </form>
+        {% endif %}
+      </div>
+      {% if gw.codes %}
+        <details class="group border-t border-zinc-100 dark:border-zinc-800">
+          <summary class="flex cursor-pointer list-none items-center gap-2 px-5 py-3 text-sm font-medium {{ muted }} hover:text-zinc-900 dark:hover:text-white [&::-webkit-details-marker]:hidden">
+            {{ icon("chevron-down", "size-4 transition group-open:rotate-180") }} Winning codes ({{ gw.given }})</summary>
+          <ul class="divide-y divide-zinc-100 px-5 pb-2 dark:divide-zinc-800">
+            {% for c in gw.codes %}
+              <li class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2.5 text-sm">
+                <span class="font-mono font-semibold tracking-wider">{{ c.pretty }}</span>
+                <span class="{{ muted }}">won {{ day(c.created_at) }}</span>
+                {% if c.claimed_at %}<span class="rounded-full bg-zinc-200 px-2.5 py-0.5 text-xs font-semibold text-zinc-600 dark:bg-white/10 dark:text-zinc-400">Collected by {{ c.customer }} · {{ day(c.claimed_at) }}</span>
+                {% else %}<span class="rounded-full bg-emerald-500/12 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400">Waiting for the winner</span>{% endif %}
+              </li>
+            {% endfor %}
+          </ul>
+        </details>
+      {% endif %}
+    </section>
+  {% else %}
+    <div class="grid place-items-center rounded-2xl border border-dashed border-zinc-300 px-6 py-16 text-center dark:border-zinc-700">
+      <span class="grid size-14 place-items-center rounded-2xl bg-brand/10 text-brand">{{ icon("gift", "size-7") }}</span>
+      <p class="mt-4 text-lg font-semibold">No giveaways yet</p>
+      <p class="mt-1 max-w-sm text-[15px] {{ muted }}">Start one: choose a product or an amount of money, and random visitors of the website will win it.</p>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block dialogs %}
+{% set dlg = "m-auto w-[min(540px,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-0 text-zinc-900 shadow-2xl backdrop:bg-black/55 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100" %}
+{% set lbl = "block text-sm font-medium text-zinc-700 dark:text-zinc-300" %}
+{% set fld = "field mt-1.5 rounded-lg py-2" %}
+{% macro head(title) %}
+  <div class="flex items-center justify-between gap-4 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+    <h2 class="text-lg">{{ title }}</h2>
+    <button type="button" data-close class="grid size-8 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10" aria-label="Close">{{ icon("x", "size-4") }}</button>
+  </div>
+{% endmacro %}
+{% macro foot(label) %}
+  <div class="flex justify-end gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
+    <button type="button" data-close class="h-10 rounded-lg border border-zinc-200 px-4 text-[15px] font-medium hover:border-zinc-400 dark:border-zinc-700">Cancel</button>
+    <button class="h-10 rounded-lg bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark" data-submit>{{ label }}</button>
+  </div>
+{% endmacro %}
+
+<dialog id="dlg-check" class="{{ dlg }} w-[min(440px,calc(100vw-2rem))]">
+  <form method="get" action="{{ url_for('admin.giveaways') }}">
+    {{ head("Check a code") }}
+    <div class="px-5 py-5">
+      <label class="{{ lbl }}">The code the winner shows you
+        <input name="code" required autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="15" data-code
+               class="{{ fld }} text-center font-mono text-2xl font-semibold uppercase tracking-[.15em] placeholder:tracking-[.15em]" placeholder="K7Q-4MZ-9XA-2PD"></label>
+    </div>
+    {{ foot("Check") }}
+  </form>
+</dialog>
+
+<dialog id="dlg-new" class="{{ dlg }}">
+  <form method="post" action="{{ url_for('admin.giveaway_new') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {{ head("New giveaway") }}
+    <div class="space-y-4 px-5 py-5">
+      <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Prize">
+        {% for value, title, note, ic in [("product", "A product", "From your stock", "package"), ("money", "Money", "An amount in cash", "gift")] %}
+          <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-zinc-200 p-3 has-checked:border-brand has-checked:bg-brand/5 dark:border-zinc-700">
+            <input type="radio" name="prize" value="{{ value }}" required class="sr-only" data-prize>
+            <span class="grid size-9 place-items-center rounded-lg bg-zinc-100 text-zinc-600 dark:bg-white/[.06] dark:text-zinc-300">{{ icon(ic, "size-[18px]") }}</span>
+            <span><span class="block text-[15px] font-semibold">{{ title }}</span><span class="block text-[13px] {{ muted }}">{{ note }}</span></span>
+          </label>
+        {% endfor %}
+      </div>
+      <label class="{{ lbl }}" data-for="product" hidden>Product to give away
+        <select name="product_id" class="{{ fld }}"><option value="">Choose…</option>
+          {% for p in products %}<option value="{{ p.id }}">{{ p.short }} · {{ p.sku }} · {{ p.stock }} in stock</option>{% endfor %}</select></label>
+      <label class="{{ lbl }}" data-for="money" hidden>Amount ({{ store.currency }})
+        <input name="amount" inputmode="decimal" class="{{ fld }}" placeholder="50000"></label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="{{ lbl }}">How many winners<input name="winners" type="number" min="1" max="1000" value="1" required class="{{ fld }}"></label>
+        <label class="{{ lbl }}">1 in how many visitors<input name="chance" type="number" min="1" max="1000000" required class="{{ fld }}" placeholder="100"></label>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="{{ lbl }}">First day<input name="starts_on" type="date" value="{{ today }}" required class="{{ fld }}"></label>
+        <label class="{{ lbl }}">Last day<input name="ends_on" type="date" min="{{ today }}" required class="{{ fld }}"></label>
+      </div>
+      <p class="text-sm {{ muted }}">Each visitor is drawn once. With 1 in 100, about one of every hundred visitors wins, until every prize is won.</p>
+    </div>
+    {{ foot("Start giveaway") }}
+  </form>
+</dialog>
+
+<script>
+  (() => {
+    document.addEventListener("click", e => {
+      const btn = e.target.closest("[data-dialog]");
+      if (btn) { const d = document.getElementById("dlg-" + btn.dataset.dialog); d.querySelector("form").reset(); prize(); d.showModal(); return; }
+      const dlg = e.target.closest("dialog");
+      if (dlg && (e.target === dlg || e.target.closest("[data-close]"))) dlg.close();
+    });
+    // product or money: show only the field that goes with the choice
+    const prize = () => {
+      const kind = document.querySelector("[data-prize]:checked")?.value;
+      document.querySelectorAll("[data-for]").forEach(box => {
+        const on = box.dataset.for === kind, input = box.querySelector("input, select");
+        box.hidden = !on; input.required = on; input.disabled = !on;
+      });
+    };
+    document.addEventListener("change", e => { if (e.target.matches("[data-prize]")) prize(); });
+    // the code: capitals, a dash after every 3
+    document.querySelector("[data-code]").addEventListener("input", e => {
+      const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 12);
+      e.target.value = raw.match(/.{1,3}/g)?.join("-") || "";
+    });
+    document.addEventListener("submit", e => { const b = e.target.querySelector("[data-submit]"); if (b) { b.disabled = true; b.textContent = b.textContent.trim() === "Check" ? "Checking…" : "Saving…"; } });
+  })();
+</script>
+{% endblock %}
