@@ -1,23 +1,23 @@
 {% extends "base.html" %}
 {% block title %}Photography studio{% endblock %}
 {% block content %}
-<section class="wrap pt-6 sm:pt-10">
-  <div class="relative overflow-hidden rounded-[2rem] bg-zinc-900">
-    <img src="{{ studio_photo }}" alt="" class="absolute inset-0 size-full object-cover opacity-55">
-    <div class="relative px-7 py-16 text-white sm:px-14 sm:py-24">
-      <p class="font-mono text-xs uppercase tracking-[0.3em] text-white/70">Photography</p>
-      <h1 class="mt-4 max-w-xl text-4xl leading-[1.05] sm:text-6xl">Pictures worth keeping.</h1>
-      <p class="mt-4 max-w-md text-lg text-white/80">Studio portraits, passport photos, weddings and product shoots.</p>
-      <a href="{{ whatsapp_link('Hello ' ~ store.name ~ '! I would like to book a photo session.') }}" target="_blank" rel="noopener" class="btn mt-8 bg-wa hover:bg-wa/90">{{ icon("whatsapp") }} Book on WhatsApp</a>
-    </div>
-  </div>
+{# page head: the earlier design #}
+<section class="wrap pb-2 pt-12">
+  <p class="text-[17px] font-semibold text-[#b64400] dark:text-[#ff791b]">Studio 250</p>
+  <h1 class="mt-2 text-[clamp(2.5rem,8vw,4rem)] leading-[1.05]">Photography.</h1>
+  <p class="mt-2 max-w-2xl text-[19px] text-[#6e6e73] dark:text-[#a1a1a6]">Portraits, passport photos, weddings and product shoots, by photographers who love what they do.</p>
+  <nav class="-mx-5 mt-6 flex gap-2 overflow-x-auto px-5 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden" aria-label="Services">
+    {% for s in services %}<a href="#service-{{ loop.index }}" class="inline-flex min-h-9 shrink-0 items-center rounded-full bg-[#f5f5f7] px-4 text-sm whitespace-nowrap hover:bg-[#e8e8ed] dark:bg-[#1d1d1f] dark:hover:bg-[#2a2a2d]">{{ s.name }}</a>{% endfor %}
+    <a href="#portfolio" class="inline-flex min-h-9 shrink-0 items-center rounded-full bg-[#f5f5f7] px-4 text-sm whitespace-nowrap hover:bg-[#e8e8ed] dark:bg-[#1d1d1f] dark:hover:bg-[#2a2a2d]">Portfolio</a>
+    <a href="{{ whatsapp_link('Hello ' ~ store.name ~ '! I would like to book a photo session.') }}" target="_blank" rel="noopener" class="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full bg-wa px-4 text-sm whitespace-nowrap text-white hover:bg-wa/90">{{ icon("whatsapp", "size-4") }} Book on WhatsApp</a>
+  </nav>
 </section>
 
-<section id="services" class="wrap mt-16 scroll-mt-24">
+<section id="services" class="wrap mt-10 scroll-mt-24">
   <h2 class="text-2xl sm:text-3xl">Services</h2>
   <div class="mt-6 grid gap-4 sm:grid-cols-2">
     {% for s in services %}
-      <div class="flex flex-col overflow-hidden rounded-3xl border border-zinc-200 dark:border-zinc-800">
+      <div id="service-{{ loop.index }}" class="flex scroll-mt-24 flex-col overflow-hidden rounded-3xl border border-zinc-200 dark:border-zinc-800">
         <div class="relative aspect-[16/9] overflow-hidden bg-zinc-100 dark:bg-zinc-900">
           <span class="absolute inset-0 grid place-items-center text-zinc-300 dark:text-zinc-700">{{ icon(s.icon, "size-12 stroke-[1.2]") }}</span>
           <img src="{{ s.photo }}" alt="{{ s.name }}" loading="lazy" onerror="this.remove()" class="absolute inset-0 size-full object-cover">

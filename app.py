@@ -97,8 +97,7 @@ app.jinja_env.filters["overview"] = overview
 def home():
     deals = [p for p in PRODUCTS if p["on_sale"]]
     featured = [p for p in PRODUCTS if p["badge"] in ("New", "Best seller", "Pro pick")]
-    return render_template("home.html", deals=deals[:4], featured=featured[:4], hero=data.HERO_PHOTO,
-                           studio_photo=data.STUDIO_PHOTO, portfolio=data.PORTFOLIO[:3])
+    return render_template("home.html", deals=deals[:4], featured=featured[:4], portfolio=data.PORTFOLIO[:3])
 
 
 @app.route("/shop")
@@ -146,7 +145,7 @@ def cart():
 
 @app.route("/photography")
 def studio():
-    return render_template("studio.html", services=data.SERVICES, portfolio=data.PORTFOLIO, studio_photo=data.STUDIO_PHOTO)
+    return render_template("studio.html", services=data.SERVICES, portfolio=data.PORTFOLIO)
 
 
 @app.route("/contact")

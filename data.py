@@ -209,5 +209,4 @@ PORTFOLIO = [
     {"photo": unsplash("1654765437547-6b572f52ee1a", 900), "title": "Evening dress", "instagram": INSTAGRAM},
 ]
 
-HERO_PHOTO = unsplash("1499914485622-a88fac536970", 1600)
-STUDIO_PHOTO = unsplash("1502982720700-bfff97f2ecac", 1400)
+# The home page photo is public/static/img/hero/desk-electronics.jpg: replace that file to change it.
