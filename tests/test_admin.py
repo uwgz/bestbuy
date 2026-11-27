@@ -5,7 +5,7 @@ import pytest
 
 from bestbuy.extensions import db
 from bestbuy.admin import today
-from bestbuy.models import AuditLog, Giveaway, GiveawayCode, Order, Product, Setting, StockMove, User
+from bestbuy.models import AuditLog, GearItem, Giveaway, GiveawayCode, Order, PortfolioItem, Product, Service, Setting, StockMove, User
 
 
 def _token(client, url="/admin/login"):
@@ -278,3 +278,52 @@ def test_no_new_winners_when_stopped_or_full(owner, app):
     gw.codes.append(GiveawayCode(code="ABC234DEF567", visitor="someone")); db.session.commit()
     assert db.session.get(Giveaway, gw.id).status == "full"
     assert not draw(app.test_client())["won"]
+
+
+# ---------------------------------------------------------------- photography
+def test_photography_tabs(owner):
+    for tab in ("gear", "services", "portfolio", "nonsense"):
+        assert owner.get(f"/admin/photography?tab={tab}").status_code == 200
+    assert "Portrait session" in owner.get("/admin/photography?tab=services").get_data(as_text=True)    # the services already there
+
+
+def test_gear_add_edit_remove(owner, client):
+    post(owner, "/admin/photography/gear/add", name="Canon EOS R6 Mark II", price="1,999", photos="")            # a photo is required
+    post(owner, "/admin/photography/gear/add", name="Canon EOS R6 Mark II", price="1,999",
+         photos="https://images.unsplash.com/photo-1\nhttps://images.unsplash.com/photo-2")
+    gear = GearItem.query.one()
+    assert gear.price_usd == 1999 and len(gear.photos) == 2
+    assert "$1,999" in client.get("/photography").get_data(as_text=True)
+    post(owner, f"/admin/photography/gear/{gear.id}/edit", name="Canon R6 II", price="1899.5", photos="https://images.unsplash.com/photo-3")
+    gear = db.session.get(GearItem, gear.id)
+    assert gear.name == "Canon R6 II" and gear.photos == ["https://images.unsplash.com/photo-3"]
+    assert "$1,899.50" in client.get("/photography").get_data(as_text=True)
+    post(owner, f"/admin/photography/gear/{gear.id}/remove")
+    assert GearItem.query.count() == 0 and 'id="gear"' not in client.get("/photography").get_data(as_text=True)
+
+
+def test_services_add_and_remove(owner, client):
+    before = Service.query.count()
+    form = {"name": "Wedding photography", "duration": "Full day", "price": "400000", "icon": "heart",
+            "photo": "https://images.unsplash.com/photo-9", "description": "Ceremony and reception."}
+    post(owner, "/admin/photography/services/add", **{**form, "description": ""})                # every field required
+    post(owner, "/admin/photography/services/add", **form)
+    assert Service.query.count() == before + 1
+    assert "Wedding photography" in client.get("/photography").get_data(as_text=True)
+    first = Service.query.order_by(Service.position).first()
+    first_id, first_name = first.id, first.name
+    post(owner, f"/admin/photography/services/{first_id}/remove")
+    assert Service.query.count() == before and first_name not in client.get("/photography").get_data(as_text=True)
+
+
+def test_portfolio_photo_with_instagram(owner, client):
+    PortfolioItem.query.delete(); db.session.commit()
+    post(owner, "/admin/photography/portfolio/add", photo="https://images.unsplash.com/photo-5", instagram="not an account!")
+    for account in ("@aline.rw", "https://www.instagram.com/aline.rw/?hl=en"):
+        post(owner, "/admin/photography/portfolio/add", photo="https://images.unsplash.com/photo-5", instagram=account)
+    items = PortfolioItem.query.all()
+    assert len(items) == 2 and all(i.instagram == "https://www.instagram.com/aline.rw/" and i.handle == "@aline.rw" for i in items)
+    assert "@aline.rw" in client.get("/photography").get_data(as_text=True)
+    item_id = items[0].id
+    post(owner, f"/admin/photography/portfolio/{item_id}/remove")
+    assert PortfolioItem.query.count() == 1

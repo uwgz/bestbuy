@@ -219,7 +219,7 @@ class Service(TimestampMixin, OrderedMixin, db.Model):
 
 
 class PortfolioItem(TimestampMixin, OrderedMixin, db.Model):
-    """A photo on the Photography page; `instagram` is where its Instagram button goes."""
+    """A photo on the Photography page; `instagram` is the Instagram account of the person in it."""
 
     __tablename__ = "portfolio_items"
 
@@ -227,6 +227,31 @@ class PortfolioItem(TimestampMixin, OrderedMixin, db.Model):
     photo = db.Column(db.String(500), nullable=False)
     title = db.Column(db.String(120), nullable=False, default="")
     instagram = db.Column(db.String(500), nullable=False, default="https://www.instagram.com/")
+
+    @property
+    def handle(self):
+        """https://www.instagram.com/aline.rw/ → "@aline.rw" ("" when the link is not an account)."""
+        name = self.instagram.split("instagram.com/", 1)[-1].strip("/").split("/")[0].split("?")[0]
+        return f"@{name}" if name and "instagram.com/" in self.instagram else ""
+
+
+class GearItem(TimestampMixin, OrderedMixin, db.Model):
+    """Photography gear shown on the Photography page, priced in US dollars."""
+
+    __tablename__ = "gear_items"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    price_usd = db.Column(db.Numeric(12, 2), nullable=False)
+    photo_links = db.Column(db.Text, nullable=False, default="")       # one link per line; the first is the cover
+
+    @property
+    def photos(self):
+        return [line for line in self.photo_links.splitlines() if line.strip()]
+
+    @property
+    def image(self):
+        return self.photos[0] if self.photos else ""
 
 
 # ---------------------------------------------------------------- home page

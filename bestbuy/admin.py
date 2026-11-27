@@ -196,4 +196,4 @@ def orders():
 
 
 # the pages live in their own files; importing them adds their routes to this blueprint
-from . import admin_dashboard, admin_giveaways, admin_settings, admin_stock  # noqa: E402,F401
+from . import admin_dashboard, admin_giveaways, admin_photography, admin_settings, admin_stock  # noqa: E402,F401

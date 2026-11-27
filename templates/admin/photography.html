@@ -1,0 +1,193 @@
+{% extends "admin/base.html" %}
+{% block title %}Photography{% endblock %}
+{% block crumb %}Photography{% endblock %}
+{% set muted = "text-zinc-500 dark:text-zinc-400" %}
+{% set ib = "grid size-9 place-items-center rounded-lg border border-zinc-200 bg-white text-zinc-600 transition hover:border-zinc-400 hover:text-zinc-900 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:text-white" %}
+{% set rb = "grid size-9 place-items-center rounded-lg border border-zinc-200 bg-white text-zinc-600 transition hover:border-red-400 hover:text-red-600 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-red-500 dark:hover:text-red-400" %}
+{% set add_label = {"gear": "Add gear", "services": "Add service", "portfolio": "Add photo"}[tab] %}
+{% macro remove(kind, row, label) %}<button type="button" data-remove="{{ url_for('admin.photography_remove', kind=kind, row_id=row.id) }}" data-label="{{ label }}" class="{{ rb }}" aria-label="Remove {{ label }}" title="Remove">{{ icon("trash", "size-4") }}</button>{% endmacro %}
+{% macro empty(ic, title, note) %}
+  <div class="grid place-items-center rounded-2xl border border-dashed border-zinc-300 px-6 py-16 text-center dark:border-zinc-700">
+    <span class="grid size-14 place-items-center rounded-2xl bg-brand/10 text-brand">{{ icon(ic, "size-7") }}</span>
+    <p class="mt-4 text-lg font-semibold">{{ title }}</p><p class="mt-1 max-w-sm text-[15px] {{ muted }}">{{ note }}</p>
+  </div>
+{% endmacro %}
+
+{% block content %}
+<div class="flex flex-wrap items-start justify-between gap-4">
+  <div>
+    <h1 class="text-[28px] leading-tight">Photography</h1>
+    <p class="mt-1 text-[15px] {{ muted }}">What the website's Photography page shows.
+      <a href="{{ url_for('studio') }}" target="_blank" class="inline-flex items-center gap-1 text-brand hover:underline">See the page {{ icon("external", "size-3.5") }}</a></p>
+  </div>
+  <button type="button" data-dialog="{{ tab }}" class="btn h-11 rounded-xl px-4">{{ icon("plus", "size-4") }} {{ add_label }}</button>
+</div>
+
+<nav class="mt-6 inline-flex rounded-xl bg-zinc-200/70 p-1 dark:bg-white/[.06]" aria-label="Photography">
+  {% for key, label in tabs.items() %}
+    <a href="{{ url_for('admin.photography', tab=key) }}"{{ ' aria-current="page"' if key == tab }}
+       class="whitespace-nowrap rounded-lg px-4 py-1.5 text-[15px] transition {{ 'bg-white font-semibold shadow-sm dark:bg-zinc-700' if key == tab else 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white' }}">{{ label }} <span class="{{ muted }} font-normal">{{ rows[key]|length }}</span></a>
+  {% endfor %}
+</nav>
+
+<div class="mt-5">
+{% if tab == "gear" %}
+  {% if rows.gear %}
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {% for g in rows.gear %}
+        <article class="overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+          <div class="relative aspect-[4/3] bg-zinc-100 dark:bg-zinc-800">
+            <span class="absolute inset-0 grid place-items-center text-zinc-400">{{ icon("camera", "size-10 stroke-[1.2]") }}</span>
+            <img src="{{ g.image }}" alt="" loading="lazy" onerror="this.remove()" class="relative size-full object-cover">
+            <span class="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-xs font-medium text-white backdrop-blur">{{ icon("image", "size-3.5") }} {{ g.photos|length }}</span>
+          </div>
+          <div class="flex items-center gap-3 p-4">
+            <div class="min-w-0 flex-1"><h2 class="truncate text-[16px] font-semibold">{{ g.name }}</h2><p class="mt-0.5 font-semibold tabular-nums text-brand">{{ usd(g.price_usd) }}</p></div>
+            {% set data = {"id": g.id, "name": g.name, "price": ("%.2f"|format(g.price_usd))|replace(".00", ""), "photos": g.photos|join("\n")} %}
+            <button type="button" data-dialog="gear" data-row='{{ data|tojson|forceescape }}' class="{{ ib }}" aria-label="Edit {{ g.name }}" title="Edit">{{ icon("pencil", "size-4") }}</button>
+            {{ remove("gear", g, g.name) }}
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}{{ empty("camera", "No gear yet", "Add cameras, lenses and lights with their price in US dollars and photos.") }}{% endif %}
+
+{% elif tab == "services" %}
+  {% if rows.services %}
+    <ul class="divide-y divide-zinc-200 overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-zinc-900">
+      {% for s in rows.services %}
+        <li class="flex items-center gap-4 p-4">
+          <span class="relative h-16 w-24 shrink-0 overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800">
+            <span class="absolute inset-0 grid place-items-center text-zinc-400">{{ icon(s.icon, "size-6") }}</span>
+            <img src="{{ s.photo }}" alt="" loading="lazy" onerror="this.remove()" class="relative size-full object-cover">
+          </span>
+          <div class="min-w-0 flex-1">
+            <h2 class="flex items-center gap-2 text-[16px] font-semibold">{{ icon(s.icon, "size-4 shrink-0 text-zinc-400") }}<span class="truncate">{{ s.name }}</span></h2>
+            <p class="mt-0.5 text-sm {{ muted }}">From <b class="text-zinc-800 dark:text-zinc-200">{{ money(s.price_from) }}</b> · {{ s.duration }}</p>
+            <p class="mt-0.5 hidden truncate text-sm {{ muted }} sm:block">{{ s.description }}</p>
+          </div>
+          {% set data = {"id": s.id, "name": s.name, "price": ("%.2f"|format(s.price_from))|replace(".00", ""), "duration": s.duration, "icon": s.icon, "photo": s.photo, "description": s.description} %}
+          <button type="button" data-dialog="services" data-row='{{ data|tojson|forceescape }}' class="{{ ib }}" aria-label="Edit {{ s.name }}" title="Edit">{{ icon("pencil", "size-4") }}</button>
+          {{ remove("services", s, s.name) }}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}{{ empty("camera", "No services yet", "Add what the studio offers: portraits, passport photos, weddings…") }}{% endif %}
+
+{% else %}
+  {% if rows.portfolio %}
+    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+      {% for item in rows.portfolio %}
+        <figure class="group relative overflow-hidden rounded-2xl bg-zinc-100 dark:bg-zinc-800">
+          <img src="{{ item.photo }}" alt="" loading="lazy" onerror="this.style.opacity=0" class="aspect-[3/4] size-full object-cover">
+          <figcaption class="absolute inset-x-0 bottom-0 flex items-center gap-1.5 bg-gradient-to-t from-black/70 to-transparent px-3 pb-3 pt-10 text-sm font-medium text-white">
+            {{ icon("instagram", "size-4 shrink-0") }}<a href="{{ item.instagram }}" target="_blank" rel="noopener" class="truncate hover:underline">{{ item.handle or "Instagram" }}</a></figcaption>
+          <div class="absolute right-2 top-2">{{ remove("portfolio", item, item.handle or "this photo") }}</div>
+        </figure>
+      {% endfor %}
+    </div>
+  {% else %}{{ empty("image", "No portfolio photos yet", "Add your best photos, each with the Instagram account of the person in it.") }}{% endif %}
+{% endif %}
+</div>
+{% endblock %}
+
+{% block dialogs %}
+{% set dlg = "m-auto w-[min(540px,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-0 text-zinc-900 shadow-2xl backdrop:bg-black/55 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100" %}
+{% set lbl = "block text-sm font-medium text-zinc-700 dark:text-zinc-300" %}
+{% set fld = "field mt-1.5 rounded-lg py-2" %}
+{% macro dialog(kind, title, label) %}
+<dialog id="dlg-{{ kind }}" class="{{ dlg }}" data-add="{{ url_for('admin.photography_add', kind=kind) }}"
+        {%- if kind != "portfolio" %} data-edit="{{ url_for('admin.photography_edit', kind=kind, row_id=0) }}"{% endif %} data-title-add="{{ title }}" data-label-add="{{ label }}">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="flex items-center justify-between gap-4 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+      <h2 class="text-lg" data-title>{{ title }}</h2>
+      <button type="button" data-close class="grid size-8 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10" aria-label="Close">{{ icon("x", "size-4") }}</button>
+    </div>
+    <div class="space-y-4 px-5 py-5">{{ caller() }}</div>
+    <div class="flex justify-end gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
+      <button type="button" data-close class="h-10 rounded-lg border border-zinc-200 px-4 text-[15px] font-medium hover:border-zinc-400 dark:border-zinc-700">Cancel</button>
+      <button class="h-10 rounded-lg bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark" data-submit>{{ label }}</button>
+    </div>
+  </form>
+</dialog>
+{% endmacro %}
+
+{% call dialog("gear", "Add gear", "Add gear") %}
+  <div class="grid grid-cols-[1fr_150px] gap-3">
+    <label class="{{ lbl }}">Name<input name="name" required maxlength="120" class="{{ fld }}" placeholder="Canon EOS R6 Mark II"></label>
+    <label class="{{ lbl }}">Price (USD)<input name="price" required inputmode="decimal" class="{{ fld }}" placeholder="1,999"></label>
+  </div>
+  <label class="{{ lbl }}">Photos <span class="font-normal text-zinc-400">(one link per line; the first is the cover)</span>
+    <textarea name="photos" rows="4" required class="{{ fld }} font-mono text-[13px]" placeholder="https://images.unsplash.com/photo-…"></textarea></label>
+{% endcall %}
+
+{% call dialog("services", "Add a service", "Add service") %}
+  <div class="grid grid-cols-2 gap-3">
+    <label class="{{ lbl }}">Service<input name="name" required maxlength="80" class="{{ fld }}" placeholder="Wedding photography"></label>
+    <label class="{{ lbl }}">How long<input name="duration" required maxlength="40" class="{{ fld }}" placeholder="Full day"></label>
+  </div>
+  <div class="grid grid-cols-2 gap-3">
+    <label class="{{ lbl }}">Price from ({{ store.currency }})<input name="price" required inputmode="decimal" class="{{ fld }}" placeholder="400000"></label>
+    <label class="{{ lbl }}">Icon<select name="icon" required class="{{ fld }}"><option value="">Choose…</option>{% for key, label in service_icons.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+  </div>
+  <label class="{{ lbl }}">Photo link<input name="photo" required maxlength="500" class="{{ fld }}" placeholder="https://images.unsplash.com/photo-…"></label>
+  <label class="{{ lbl }}">Description<textarea name="description" rows="2" required maxlength="600" class="{{ fld }}" placeholder="Ceremony and reception, with 300 edited photos."></textarea></label>
+{% endcall %}
+
+{% call dialog("portfolio", "Add a photo", "Add photo") %}
+  <label class="{{ lbl }}">Photo link<input name="photo" required maxlength="500" class="{{ fld }}" placeholder="https://images.unsplash.com/photo-…" data-preview-src></label>
+  <label class="{{ lbl }}">Instagram of the person in the photo<input name="instagram" required maxlength="200" class="{{ fld }}" placeholder="@aline.rw"></label>
+  <div class="hidden aspect-[3/4] w-32 overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800" data-preview><img alt="" class="size-full object-cover"></div>
+{% endcall %}
+
+<dialog id="dlg-remove" class="{{ dlg }} w-[min(420px,calc(100vw-2rem))]">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="px-5 pb-2 pt-6 text-center">
+      <span class="mx-auto grid size-12 place-items-center rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400">{{ icon("trash", "size-6") }}</span>
+      <h2 class="mt-3 text-lg">Remove <span data-label></span>?</h2>
+      <p class="mt-1 text-sm {{ muted }}">It disappears from the Photography page.</p>
+    </div>
+    <div class="flex justify-center gap-2 px-5 pb-6 pt-4">
+      <button type="button" data-close class="h-10 rounded-lg border border-zinc-200 px-4 text-[15px] font-medium hover:border-zinc-400 dark:border-zinc-700">Keep it</button>
+      <button class="h-10 rounded-lg bg-red-600 px-5 text-[15px] font-semibold text-white hover:bg-red-700" data-submit>Remove</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+  (() => {
+    document.addEventListener("click", e => {
+      const rm = e.target.closest("[data-remove]");
+      if (rm) {
+        const d = document.getElementById("dlg-remove");
+        d.querySelector("form").action = rm.dataset.remove;
+        d.querySelector("[data-label]").textContent = rm.dataset.label;
+        d.showModal(); return;
+      }
+      const btn = e.target.closest("[data-dialog]");
+      if (btn) {
+        const d = document.getElementById("dlg-" + btn.dataset.dialog), form = d.querySelector("form");
+        const row = btn.dataset.row ? JSON.parse(btn.dataset.row) : null;
+        form.reset();
+        form.action = row ? d.dataset.edit.replace("/0/", `/${row.id}/`) : d.dataset.add;
+        d.querySelector("[data-title]").textContent = row ? `Edit ${row.name}` : d.dataset.titleAdd;
+        d.querySelector("[data-submit]").textContent = row ? "Save" : d.dataset.labelAdd;
+        if (row) for (const [k, v] of Object.entries(row)) if (form.elements[k]) form.elements[k].value = v;
+        const prev = d.querySelector("[data-preview]"); if (prev) prev.classList.add("hidden");
+        d.showModal(); return;
+      }
+      const dlg = e.target.closest("dialog");
+      if (dlg && (e.target === dlg || e.target.closest("[data-close]"))) dlg.close();
+    });
+    // portfolio: show the photo as soon as its link is pasted
+    document.querySelector("[data-preview-src]")?.addEventListener("input", e => {
+      const box = document.querySelector("[data-preview]"), img = box.querySelector("img"), url = e.target.value.trim();
+      box.classList.toggle("hidden", !url.startsWith("https://"));
+      img.src = url; img.onerror = () => box.classList.add("hidden");
+    });
+    document.addEventListener("submit", e => { const b = e.target.querySelector("[data-submit]"); if (b) { b.disabled = true; b.textContent = b.textContent === "Remove" ? "Removing…" : "Saving…"; } });
+  })();
+</script>
+{% endblock %}

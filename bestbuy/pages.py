@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from .extensions import db
 from .icons import icon
-from .models import Category, Giveaway, GiveawayCode, HeroSlide, PortfolioItem, Product, Service, Setting, new_code
+from .models import Category, GearItem, Giveaway, GiveawayCode, HeroSlide, PortfolioItem, Product, Service, Setting, new_code
 
 SORTS = {"featured": "Featured", "price-asc": "Price: low to high", "price-desc": "Price: high to low", "name": "Name"}
 FEATURED_BADGES = ("New", "Best seller", "Pro pick")
@@ -18,6 +18,11 @@ FEATURED_BADGES = ("New", "Best seller", "Pro pick")
 def money(value):
     store = Setting.store()
     return f'{store["currency"]} {value:,.{store["decimals"]}f}'
+
+
+def usd(value):
+    """Gear prices: $1,250 or $1,250.50"""
+    return f"${value:,.2f}".replace(".00", "")
 
 
 def overview(text):
@@ -100,7 +105,7 @@ def init_app(app):
 
     @app.context_processor
     def _globals():
-        return {"store": Setting.store(), "categories": Category.as_dict(), "icon": icon, "money": money,
+        return {"store": Setting.store(), "categories": Category.as_dict(), "icon": icon, "money": money, "usd": usd,
                 "whatsapp_link": whatsapp_link, "nav_section": _section(request.endpoint), "giveaway_on": giveaway_on}
 
     @app.route("/giveaway/draw", methods=["POST"])
@@ -179,7 +184,8 @@ def init_app(app):
     def studio():
         services = Service.query.filter_by(is_active=True).order_by(Service.position, Service.id).all()
         portfolio = PortfolioItem.query.filter_by(is_active=True).order_by(PortfolioItem.position, PortfolioItem.id).all()
-        return render_template("studio.html", services=services, portfolio=portfolio)
+        gear = GearItem.query.filter_by(is_active=True).order_by(GearItem.position, GearItem.id).all()
+        return render_template("studio.html", services=services, portfolio=portfolio, gear=gear)
 
     @app.route("/contact")
     def contact():
