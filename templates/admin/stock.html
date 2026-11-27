@@ -109,10 +109,10 @@
     <div class="space-y-4 px-5 py-5">
       <div class="grid grid-cols-2 gap-3">
         <label class="{{ lbl }}">How many arrived<input name="qty" type="number" min="1" value="1" required inputmode="numeric" class="{{ fld }}" data-qty></label>
-        <label class="{{ lbl }}">Buying price each ({{ store.currency }})<input name="cost" inputmode="decimal" class="{{ fld }}" data-cost></label>
+        <label class="{{ lbl }}">Buying price each ({{ store.currency }})<input name="cost" required inputmode="decimal" class="{{ fld }}" data-cost></label>
       </div>
       <label class="{{ lbl }}">Date<input name="day" type="date" value="{{ today }}" max="{{ today }}" required class="{{ fld }}"></label>
-      <p class="-mt-1 text-sm text-zinc-500 dark:text-zinc-400" data-cost-note></p>
+      <p class="-mt-1 text-sm text-amber-700 empty:hidden dark:text-amber-400" data-cost-note></p>
       <p class="flex items-baseline justify-between rounded-xl bg-zinc-100 px-4 py-3 dark:bg-white/5">
         <span class="text-sm text-zinc-500 dark:text-zinc-400" data-stock-note></span>
         <span class="text-sm">You paid <b class="ml-1 text-lg tabular-nums" data-total>—</b></span>
@@ -231,17 +231,17 @@
           const note = qs(dlg, "[data-stock-note]");
           if (note) note.textContent = `${p.sku} · ${p.stock} in stock`;
           if (kind === "sell") {
-            qs(dlg, "[data-price]").value = p.final;
+            const price = qs(dlg, "[data-price]");            // the selling price is only a grey reminder
+            price.value = ""; price.placeholder = Number(p.final).toLocaleString("en-US");
             qs(dlg, "[data-qty]").max = Math.max(p.stock, 1);
             dlg.oninput = () => totalOf(dlg, "[data-price]");
           }
           if (kind === "refill") {
-            // empty = the same buying price as now (shown as the placeholder)
+            // the saved buying price is only a grey reminder: it must be typed to save
             const cost = qs(dlg, "[data-cost]"), known = num(p.cost) > 0;
-            cost.value = ""; cost.required = !known;
-            cost.placeholder = known ? Number(p.cost).toLocaleString("en-US") : "What one unit cost you";
-            qs(dlg, "[data-cost-note]").textContent = known ? "Leave the buying price empty if it's the same as last time." : "";
-            dlg.oninput = () => { const t = num(qs(dlg, "[data-qty]").value) * (num(cost.value) || num(p.cost)); qs(dlg, "[data-total]").textContent = t > 0 ? fmt(t) : "—"; };
+            cost.value = ""; cost.placeholder = known ? Number(p.cost).toLocaleString("en-US") : "What one unit cost you";
+            qs(dlg, "[data-cost-note]").textContent = known ? "" : "No buying price saved for this product yet.";
+            dlg.oninput = () => totalOf(dlg, "[data-cost]");
           }
           if (kind === "media") { form.elements.photos.value = p.photos; form.elements.badge.value = p.badge; }
           if (kind === "discount") {

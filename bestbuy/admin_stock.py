@@ -221,12 +221,7 @@ def product_refill(product_id):
     f = request.form
     try:
         qty = whole(f.get("qty"), "How many arrived", 1, 100000)
-        if (f.get("cost") or "").strip():
-            unit_cost = amount(f.get("cost"), "Buying price each")
-        elif product.cost:
-            unit_cost = Decimal(product.cost)              # left empty: the same price as before
-        else:
-            raise FormError("Buying price each: enter what one unit cost you.")
+        unit_cost = amount(f.get("cost"), "Buying price each")
         day = _day(f)
         old_units = max(product.stock, 0)
         product.cost = ((Decimal(product.cost) * old_units + unit_cost * qty) / (old_units + qty)).quantize(Decimal("0.01"))

@@ -90,6 +90,7 @@ def test_sell_checks_every_field(owner):
     sell(owner, p, day=(today() + timedelta(days=3)).isoformat())           # the future
     sell(owner, p, customer="")                                               # customer is required
     sell(owner, p, day="")
+    sell(owner, p, price="")                                                  # price must be typed
     assert Order.query.count() == 0 and db.session.get(Product, p.id).stock == 7
 
 
@@ -101,13 +102,8 @@ def test_refill_averages_the_buying_price(owner):
     assert p.stock == 10 and p.cost == 130000                                  # (7×100k + 3×200k) / 10
     move = StockMove.query.filter_by(kind="refill").one()
     assert move.qty == 3 and move.amount == 600000
-    post(owner, f"/admin/stock/{p.id}/refill", qty="2", cost="", day=today().isoformat())   # empty: same price as now
-    p = db.session.get(Product, p.id)
-    assert p.stock == 12 and p.cost == 130000
-    assert StockMove.query.filter_by(kind="refill").order_by(StockMove.id.desc()).first().amount == 260000
-    p.cost = 0; db.session.commit()
-    post(owner, f"/admin/stock/{p.id}/refill", qty="1", cost="", day=today().isoformat())   # no price known yet: refused
-    assert db.session.get(Product, p.id).stock == 12
+    post(owner, f"/admin/stock/{p.id}/refill", qty="2", cost="", day=today().isoformat())   # buying price must be typed
+    assert db.session.get(Product, p.id).stock == 10
 
 
 def test_hide_and_show(owner):
