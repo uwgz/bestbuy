@@ -104,7 +104,7 @@
           <img src="{{ item.photo }}" alt="{{ item.title }}" loading="lazy" class="aspect-[3/4] size-full object-cover transition duration-500 group-hover:scale-[1.04]">
         </button>
         <a href="{{ item.instagram }}" target="_blank" rel="noopener" aria-label="{{ item.handle or 'See' }} on Instagram"
-           class="absolute bottom-3 left-3 inline-flex h-9 max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-full bg-black/45 px-3 text-sm font-medium text-white backdrop-blur transition hover:bg-black/70">{{ icon("instagram", "size-4 shrink-0") }}<span class="truncate">{{ item.handle or "Instagram" }}</span></a>
+           class="absolute bottom-3 right-3 inline-flex size-10 max-w-[calc(100%-1.5rem)] items-center justify-center gap-1.5 rounded-full bg-black/45 text-sm font-medium text-white backdrop-blur transition hover:bg-black/70 sm:h-9 sm:w-auto sm:px-3">{{ icon("instagram", "size-5 shrink-0 sm:size-4") }}<span class="hidden truncate sm:inline">{{ item.handle or "Instagram" }}</span></a>
       </div>
     {% endfor %}
   </div>

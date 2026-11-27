@@ -51,9 +51,9 @@
   {# phones: day/night tab in the right edge of the screen. Every so often it slides out, waits a few seconds and
      slides back into the edge, leaving a handle. Touch the handle (any time) to bring it out; touch it again to switch. #}
   <button type="button" data-theme-tab aria-label="Switch day / night"
-          class="group fixed right-0 top-1/2 z-30 -translate-y-1/2 py-4 pl-6 transition-[translate] duration-700 ease-[cubic-bezier(.34,1.56,.64,1)] translate-x-[calc(100%-38px)] data-out:translate-x-0 motion-reduce:transition-none sm:hidden">
+          class="group fixed right-0 top-1/2 z-30 -translate-y-1/2 py-6 pl-10 transition-[translate] duration-700 ease-[cubic-bezier(.34,1.56,.64,1)] translate-x-[calc(100%-50px)] data-out:translate-x-0 motion-reduce:transition-none sm:hidden">
     <span class="relative flex h-[60px] w-[58px] items-center justify-center rounded-l-[22px] border border-r-0 border-zinc-200/80 bg-white/80 shadow-[-8px_10px_30px_-10px_rgba(0,0,0,.35)] backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/80 dark:shadow-[-8px_10px_30px_-8px_rgba(0,0,0,.9)]">
-      <span class="absolute left-[5px] h-8 w-1 rounded-full bg-zinc-400/80 transition-opacity duration-500 group-data-out:opacity-0 dark:bg-zinc-500/80"></span>
+      <span class="absolute left-[4px] h-7 w-[3px] rounded-full bg-zinc-400/70 transition-opacity duration-500 group-data-out:opacity-0 dark:bg-zinc-500/80"></span>
       <span class="grid size-10 place-items-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-700 text-white shadow-lg shadow-violet-600/40 transition duration-700 ease-[cubic-bezier(.34,1.56,.64,1)] -rotate-[120deg] scale-50 opacity-0 group-data-out:rotate-0 group-data-out:scale-100 group-data-out:opacity-100 dark:from-amber-300 dark:to-orange-500 dark:shadow-orange-500/40" data-theme-tab-icon>
         <span class="dark:hidden">{{ icon("moon", "size-5") }}</span><span class="hidden dark:inline">{{ icon("sun", "size-5") }}</span>
       </span>
