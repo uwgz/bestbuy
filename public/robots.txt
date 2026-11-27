@@ -1,4 +1,2 @@
 User-agent: *
-Disallow: /altar
-Disallow: /cart
-Disallow: /giveaway/
+Allow: /

@@ -1,6 +1,0 @@
-{# Social media links — edit them in the admin panel: Store details → Social media #}
-<div class="social">
-  {% for key, label, url in business.social_links %}
-    <a href="{{ url }}" target="_blank" rel="noopener" aria-label="{{ label }}" title="{{ label }}" class="social-{{ key }}">{{ icon(key) }}</a>
-  {% endfor %}
-</div>

@@ -1,7 +1,0 @@
-<figure class="gallery-item" data-category="{{ item.category }}">
-  <img src="{{ item.url }}" alt="{{ item.alt or item.title or item.category }}" loading="lazy">
-  <figcaption>
-    {% if item.title %}<b>{{ item.title }}</b>{% endif %}<span>{{ item.category }}</span>
-    {% if item.instagram %}<a class="pf-ig" href="{{ item.instagram_url }}" target="_blank" rel="noopener" title="@{{ item.instagram }}" aria-label="@{{ item.instagram }} on Instagram">{{ icon("instagram") }}</a>{% endif %}
-  </figcaption>
-</figure>

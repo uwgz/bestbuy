@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ categories[cat][0] if cat else 'Shop' }}{% endblock %}
+{% block content %}
+<section class="wrap pt-8 sm:pt-12">
+  <h1 class="text-3xl sm:text-5xl">{{ categories[cat][0] if cat else 'All devices' }}</h1>
+  <p class="mt-2 text-zinc-500">{{ items|length }} product{{ '' if items|length == 1 else 's' }}{% if q %} for “{{ q }}”{% endif %}</p>
+
+  {# categories #}
+  <nav class="-mx-5 mt-6 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:px-0" aria-label="Categories">
+    {% set chip = "shrink-0 rounded-full border px-4 py-2 text-sm transition " %}
+    {% set on = "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900" %}
+    {% set off = "border-zinc-300 hover:border-zinc-900 dark:border-zinc-700 dark:hover:border-zinc-300" %}
+    <a href="{{ url_for('shop', q=q or None, sort=sort if sort != 'featured' else None) }}" class="{{ chip }}{{ on if not cat else off }}">All</a>
+    {% for key, (label, _i, _c) in categories.items() %}
+      <a href="{{ url_for('shop', category=key, q=q or None, sort=sort if sort != 'featured' else None) }}" class="{{ chip }}{{ on if cat == key else off }}">{{ label }} <span class="opacity-50">{{ counts[key] }}</span></a>
+    {% endfor %}
+  </nav>
+
+  {# search and sort #}
+  <form method="get" class="mt-4 grid gap-3 sm:grid-cols-[1fr_220px]" role="search">
+    {% if cat %}<input type="hidden" name="category" value="{{ cat }}">{% endif %}
+    <label class="relative">
+      <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400">{{ icon("search", "size-4") }}</span>
+      <input type="search" name="q" value="{{ q }}" placeholder="Search devices, brands, SKU…" class="field pl-10" aria-label="Search">
+    </label>
+    <select name="sort" class="field" aria-label="Sort" onchange="this.form.submit()">
+      {% for key, label in sorts.items() %}<option value="{{ key }}" {{ 'selected' if key == sort }}>{{ label }}</option>{% endfor %}
+    </select>
+  </form>
+
+  {% if items %}
+    <div class="mt-8 grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-3 lg:grid-cols-4">
+      {% for p in items %}{% include "partials/card.html" %}{% endfor %}
+    </div>
+  {% else %}
+    <div class="mt-10 rounded-3xl bg-zinc-100 px-6 py-16 text-center dark:bg-zinc-900">
+      <p class="text-lg font-medium">Nothing matches “{{ q }}”.</p>
+      <p class="mt-1 text-zinc-500">Try another word, or ask us on WhatsApp: we may have it in the shop.</p>
+      <a href="{{ url_for('shop') }}" class="btn mt-6">See all devices</a>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

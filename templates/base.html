@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>{% block title %}{{ store.tagline }}{% endblock %} | {{ store.name }}</title>
+  <meta name="description" content="{{ store.name }}: phones, laptops, TVs, audio, cameras and professional photography.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='site.webmanifest') }}">
+  <meta property="og:image" content="{{ url_for('static', filename='img/brand/social-profile-1080.png', _external=True) }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script>
+    // night mode: the visitor's choice (moon / sun button), otherwise the phone or computer setting
+    try {
+      var t = localStorage.getItem("theme");
+      if (t === "dark" || (!t && matchMedia("(prefers-color-scheme: dark)").matches)) document.documentElement.classList.add("dark");
+    } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="flex min-h-dvh flex-col" data-currency="{{ store.currency }}" data-decimals="{{ store.decimals }}"
+      data-store="{{ store.name }}" data-whatsapp="{{ store.whatsapp }}">
+
+  <header class="sticky top-0 z-40 border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-black">
+    <nav class="wrap flex h-16 items-center gap-3" aria-label="Main">
+      <a href="{{ url_for('home') }}" class="flex flex-1 items-center gap-2.5 font-display text-[17px] font-semibold" aria-label="{{ store.name }}, home">
+        <span class="block h-8 w-[30px] [&_svg]:h-full [&_svg]:w-full">{% include "partials/logo_anim.svg" %}</span>
+        <span class="hidden md:inline">{{ store.name }}</span>
+      </a>
+      <div class="flex items-center gap-6 font-mono text-[13px] uppercase tracking-[0.28em] sm:gap-10 sm:text-sm">
+        <a href="{{ url_for('shop') }}" class="py-2 transition {{ 'text-zinc-900 dark:text-white' if nav_section != 'photo' else 'text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-white' }}"{{ ' aria-current="page"' if nav_section == 'devices' }}>Devices</a>
+        <a href="{{ url_for('studio') }}" class="py-2 transition {{ 'text-zinc-900 dark:text-white' if nav_section != 'devices' else 'text-zinc-400 hover:text-zinc-900 dark:text-zinc-500 dark:hover:text-white' }}"{{ ' aria-current="page"' if nav_section == 'photo' }}>Photography</a>
+      </div>
+      <div class="flex flex-1 items-center justify-end gap-1">
+        <button type="button" data-theme-toggle class="hidden size-10 place-items-center rounded-full text-zinc-600 hover:bg-zinc-100 sm:grid dark:text-zinc-300 dark:hover:bg-zinc-900" aria-label="Switch day / night">
+          <span class="dark:hidden">{{ icon("moon") }}</span><span class="hidden dark:inline">{{ icon("sun") }}</span>
+        </button>
+        <a href="{{ url_for('cart') }}" class="relative grid size-10 place-items-center rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-900" aria-label="Cart">
+          {{ icon("bag", "size-6") }}
+          <span data-cart-count hidden class="absolute right-0.5 top-0.5 grid min-w-[18px] place-items-center rounded-full bg-brand px-1 text-[11px] font-semibold leading-[18px] text-white">0</span>
+        </a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="flex-1">{% block content %}{% endblock %}</main>
+
+  <footer class="mt-20 border-t border-zinc-200 bg-zinc-50 pb-28 pt-12 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-400">
+    <div class="wrap grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="text-center sm:text-left">
+        <p class="font-display text-base font-semibold text-zinc-900 dark:text-white">{{ store.name }}</p>
+        <p class="mt-2">{{ store.tagline }}</p>
+        {% set socials = [('instagram', store.instagram), ('facebook', store.facebook), ('tiktok', store.tiktok)] %}
+        {% if store.instagram or store.facebook or store.tiktok %}
+        <div class="mt-4 flex justify-center gap-2 sm:justify-start">
+          {% for name, url in socials if url %}<a href="{{ url }}" target="_blank" rel="noopener" aria-label="{{ name|title }}" class="grid size-10 place-items-center rounded-full border border-zinc-300 hover:border-zinc-900 dark:border-zinc-700 dark:hover:border-zinc-300">{{ icon(name) }}</a>{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      <div>
+        <p class="mb-3 font-semibold text-zinc-900 dark:text-white">Shop</p>
+        <ul class="grid grid-cols-2 gap-y-2 sm:grid-cols-1">
+          {% for key, (label, _i, _c) in categories.items() %}<li><a class="hover:text-zinc-900 dark:hover:text-white" href="{{ url_for('shop', category=key) }}">{{ label }}</a></li>{% endfor %}
+        </ul>
+      </div>
+      <div>
+        <p class="mb-3 font-semibold text-zinc-900 dark:text-white">Photography</p>
+        <ul class="space-y-2">
+          <li><a class="hover:text-zinc-900 dark:hover:text-white" href="{{ url_for('studio') }}#services">Studio services</a></li>
+          <li><a class="hover:text-zinc-900 dark:hover:text-white" href="{{ url_for('studio') }}#portfolio">Portfolio</a></li>
+          <li><a class="hover:text-zinc-900 dark:hover:text-white" href="{{ whatsapp_link('Hello ' ~ store.name ~ '! I would like to book a photo session.') }}" target="_blank" rel="noopener">Book on WhatsApp</a></li>
+        </ul>
+      </div>
+      <div>
+        <p class="mb-3 font-semibold text-zinc-900 dark:text-white">Visit us</p>
+        <ul class="space-y-2">
+          {% if store.address %}<li>{{ store.address }}</li>{% endif %}
+          {% if store.hours %}<li>{{ store.hours }}</li>{% endif %}
+          {% if store.phone %}<li><a class="hover:text-zinc-900 dark:hover:text-white" href="tel:{{ store.phone|replace(' ', '') }}">{{ store.phone }}</a></li>{% endif %}
+          {% if store.email %}<li><a class="hover:text-zinc-900 dark:hover:text-white" href="mailto:{{ store.email }}">{{ store.email }}</a></li>{% endif %}
+          <li><a class="hover:text-zinc-900 dark:hover:text-white" href="{{ url_for('contact') }}">Contact us</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="wrap mt-10 flex flex-col items-center justify-between gap-3 border-t border-zinc-200 pt-6 text-xs sm:flex-row dark:border-zinc-800">
+      <p>© <span data-year>2026</span> {{ store.name }}. All rights reserved.</p>
+      <button type="button" data-theme-toggle class="inline-flex items-center gap-1.5 hover:text-zinc-900 sm:hidden dark:hover:text-white">
+        <span class="dark:hidden">{{ icon("moon", "size-4") }} Night mode</span><span class="hidden dark:inline-flex dark:items-center dark:gap-1.5">{{ icon("sun", "size-4") }} Day mode</span>
+      </button>
+    </div>
+  </footer>
+
+  {# floating WhatsApp button: bottom left, appears once you scroll #}
+  <a href="{{ whatsapp_link('Hello ' ~ store.name ~ '!') }}" target="_blank" rel="noopener" aria-label="Chat on WhatsApp" data-wa-float
+     class="fixed bottom-5 left-5 z-40 grid size-14 translate-y-3 place-items-center rounded-full bg-wa text-white opacity-0 shadow-lg shadow-black/20 transition duration-500 pointer-events-none">
+    {{ icon("whatsapp", "size-7") }}
+  </a>
+
+  <div data-toast role="status" aria-live="polite"
+       class="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 translate-y-4 rounded-full bg-zinc-900 px-5 py-2.5 text-[15px] text-white opacity-0 transition duration-300 dark:bg-white dark:text-zinc-900"></div>
+
+  {% block scripts %}{% endblock %}{# page data first, then the script that uses it #}
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
