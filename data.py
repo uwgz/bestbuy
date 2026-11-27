@@ -185,22 +185,28 @@ PRODUCTS = [
 # ---------------------------------------------------------------- photography studio
 SERVICES = [
     {"name": "Portrait session", "icon": "user", "price_from": 40000, "duration": "1 hour",
+     "photo": unsplash("1627161683077-e34782c24d81", 900),
      "description": "Studio portraits for individuals, couples or families, with 10 edited photos."},
     {"name": "Passport & ID photos", "icon": "camera", "price_from": 5000, "duration": "10 minutes",
+     "photo": unsplash("1765005204058-10418f5123c5", 900),
      "description": "Official-size photos printed while you wait."},
     {"name": "Events & weddings", "icon": "calendar", "price_from": 300000, "duration": "Half or full day",
+     "photo": unsplash("1608009232260-9b527a5bb9bd", 900),
      "description": "Weddings, introductions (gusaba), graduations and parties, edited and delivered online."},
     {"name": "Product photography", "icon": "package", "price_from": 8000, "duration": "Per product",
+     "photo": unsplash("1763970586854-62e14f07ae35", 900),
      "description": "Clean photos of your products for online shops and social media."},
 ]
 
+# instagram: where the Instagram button on the photo goes; replace with the link to that post on your page
+INSTAGRAM = "https://www.instagram.com/"
 PORTFOLIO = [
-    {"photo": unsplash("1506863530036-1efeddceb993", 900), "title": "Black and white portrait"},
-    {"photo": unsplash("1517462964-21fdcec3f25b", 900), "title": "Outdoor portrait"},
-    {"photo": unsplash("1532170579297-281918c8ae72", 900), "title": "Studio portrait"},
-    {"photo": unsplash("1581841064838-a470c740e8ee", 900), "title": "Fashion portrait"},
-    {"photo": unsplash("1606143412458-acc5f86de897", 900), "title": "Beauty portrait"},
-    {"photo": unsplash("1654765437547-6b572f52ee1a", 900), "title": "Evening dress"},
+    {"photo": unsplash("1506863530036-1efeddceb993", 900), "title": "Black and white portrait", "instagram": INSTAGRAM},
+    {"photo": unsplash("1517462964-21fdcec3f25b", 900), "title": "Outdoor portrait", "instagram": INSTAGRAM},
+    {"photo": unsplash("1532170579297-281918c8ae72", 900), "title": "Studio portrait", "instagram": INSTAGRAM},
+    {"photo": unsplash("1581841064838-a470c740e8ee", 900), "title": "Fashion portrait", "instagram": INSTAGRAM},
+    {"photo": unsplash("1606143412458-acc5f86de897", 900), "title": "Beauty portrait", "instagram": INSTAGRAM},
+    {"photo": unsplash("1654765437547-6b572f52ee1a", 900), "title": "Evening dress", "instagram": INSTAGRAM},
 ]
 
 HERO_PHOTO = unsplash("1499914485622-a88fac536970", 1600)

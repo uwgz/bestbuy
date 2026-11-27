@@ -17,7 +17,12 @@
   <h2 class="text-2xl sm:text-3xl">Services</h2>
   <div class="mt-6 grid gap-4 sm:grid-cols-2">
     {% for s in services %}
-      <div class="flex flex-col rounded-3xl border border-zinc-200 p-6 dark:border-zinc-800">
+      <div class="flex flex-col overflow-hidden rounded-3xl border border-zinc-200 dark:border-zinc-800">
+        <div class="relative aspect-[16/9] overflow-hidden bg-zinc-100 dark:bg-zinc-900">
+          <span class="absolute inset-0 grid place-items-center text-zinc-300 dark:text-zinc-700">{{ icon(s.icon, "size-12 stroke-[1.2]") }}</span>
+          <img src="{{ s.photo }}" alt="{{ s.name }}" loading="lazy" onerror="this.remove()" class="absolute inset-0 size-full object-cover">
+        </div>
+        <div class="flex flex-1 flex-col p-6">
         <div class="flex items-center gap-3">
           <span class="grid size-11 place-items-center rounded-2xl bg-zinc-100 dark:bg-zinc-900">{{ icon(s.icon, "size-6 stroke-[1.5]") }}</span>
           <div><h3 class="text-lg">{{ s.name }}</h3><p class="text-sm text-zinc-500">{{ s.duration }}</p></div>
@@ -26,6 +31,7 @@
         <div class="mt-5 flex items-center justify-between gap-3">
           <p class="text-sm">From <strong class="text-base">{{ money(s.price_from) }}</strong></p>
           <a href="{{ whatsapp_link('Hello ' ~ store.name ~ '! I would like to book: ' ~ s.name ~ '.') }}" target="_blank" rel="noopener" class="btn-outline py-2 text-sm">Book</a>
+        </div>
         </div>
       </div>
     {% endfor %}
@@ -36,9 +42,13 @@
   <h2 class="text-2xl sm:text-3xl">Portfolio</h2>
   <div class="mt-6 grid grid-cols-2 gap-3 md:grid-cols-3">
     {% for item in portfolio %}
-      <button type="button" data-zoom="{{ item.photo }}" data-title="{{ item.title }}" class="group overflow-hidden rounded-3xl bg-zinc-100 dark:bg-zinc-900">
-        <img src="{{ item.photo }}" alt="{{ item.title }}" loading="lazy" class="aspect-[3/4] size-full object-cover transition duration-500 group-hover:scale-[1.04]">
-      </button>
+      <div class="relative">
+        <button type="button" data-zoom="{{ item.photo }}" data-title="{{ item.title }}" class="group block w-full overflow-hidden rounded-3xl bg-zinc-100 dark:bg-zinc-900">
+          <img src="{{ item.photo }}" alt="{{ item.title }}" loading="lazy" class="aspect-[3/4] size-full object-cover transition duration-500 group-hover:scale-[1.04]">
+        </button>
+        <a href="{{ item.instagram }}" target="_blank" rel="noopener" aria-label="See on Instagram"
+           class="absolute bottom-3 right-3 grid size-10 place-items-center rounded-full bg-black/45 text-white backdrop-blur transition hover:bg-black/70">{{ icon("instagram", "size-5") }}</a>
+      </div>
     {% endfor %}
   </div>
 </section>

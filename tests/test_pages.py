@@ -76,3 +76,11 @@ def test_no_login_or_admin(client):
 def test_unknown_product_is_404(client):
     r = client.get("/product/nope")
     assert r.status_code == 404 and b"This page isn" in r.data
+
+
+def test_studio_cards_have_photos_and_portfolio_has_instagram(client):
+    html = client.get("/photography").get_data(as_text=True)
+    for s in data.SERVICES:
+        assert s["photo"].replace("&", "&amp;") in html
+    assert html.count('aria-label="See on Instagram"') == len(data.PORTFOLIO)
+    assert 'href="https://www.instagram.com/"' in html
