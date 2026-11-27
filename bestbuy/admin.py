@@ -1,21 +1,20 @@
 """
 Admin pages (/admin): sign in, then manage the shop.
 
-Built so far: the layout, the login, and Stock (add, edit, sell, refill, hide / show).
-Dashboard, Orders, Giveaways and Settings show their page header until we design them.
+Built so far: the layout, the login, Dashboard, Stock and Settings (admin_*.py files).
+Orders and Giveaways show their page header until we design them.
 """
 import re
 import secrets
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from functools import wraps
 from zoneinfo import ZoneInfo
 
-from flask import (Blueprint, abort, current_app, flash, g, redirect, render_template, request, session,
-                   url_for)
+from flask import Blueprint, abort, current_app, flash, g, redirect, render_template, request, session, url_for
 
 from .extensions import db
-from .models import AuditLog, Category, Order, OrderItem, Product, ProductPhoto, User, utcnow
+from .models import AuditLog, Order, Product, User, utcnow
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -160,14 +159,36 @@ def _back(default):
     return target if target.startswith("/admin") else default
 
 
+def whole(value, label, low=0, high=100000):
+    try:
+        number = int(str(value).strip())
+    except ValueError:
+        raise FormError(f"{label}: enter a whole number.")
+    if not low <= number <= high:
+        raise FormError(f"{label}: between {low} and {high:,}.")
+    return number
+
+
+def amount(value, label, allow_zero=False):
+    text = str(value or "").replace(",", "").replace(" ", "").strip()
+    try:
+        number = Decimal(text).quantize(Decimal("0.01"))
+    except InvalidOperation:
+        raise FormError(f"{label}: enter an amount, like 1290000.")
+    if number < 0 or number > Decimal("9999999999") or (number == 0 and not allow_zero):
+        raise FormError(f"{label}: enter an amount, like 1290000.")
+    return number
+
+
+def text(f, name, label, required=True, limit=300):
+    value = " ".join((f.get(name) or "").split())[:limit]
+    if required and not value:
+        raise FormError(f"Fill in {label}.")
+    return value
+
+
 def _page(title, subtitle, page_icon, button=None):
     return render_template("admin/page.html", title=title, subtitle=subtitle, page_icon=page_icon, button=button)
-
-
-@bp.route("/")
-@login_required
-def dashboard():
-    return _page("Dashboard", "Your store at a glance.", "layout")
 
 
 @bp.route("/orders")
@@ -182,199 +203,5 @@ def giveaways():
     return _page("Giveaways", "A random visitor wins a prize; check their code here.", "gift", button="Start a giveaway")
 
 
-@bp.route("/settings")
-@login_required
-def settings():
-    return _page("Settings", "Store details, WhatsApp number, and your account.", "settings")
-
-
-# ======================================================================
-#  Stock
-# ======================================================================
-@bp.route("/stock")
-@login_required
-def stock():
-    everything = Product.query.order_by(Product.position, Product.id).all()
-    categories = Category.as_dict()
-    cat = request.args.get("category", "")
-    cat = cat if cat in categories else ""
-    items = [p for p in everything if p.category == cat] if cat else everything
-    counts = {key: sum(p.category == key for p in everything) for key in categories}
-    return render_template("admin/stock.html", items=items, total=len(everything), counts=counts, cat=cat)
-
-
-def _product_or_404(product_id):
-    return db.session.get(Product, product_id) or abort(404)
-
-
-def _whole(value, label, low=0, high=100000):
-    try:
-        number = int(str(value).strip())
-    except ValueError:
-        raise FormError(f"{label}: enter a whole number.")
-    if not low <= number <= high:
-        raise FormError(f"{label}: between {low} and {high:,}.")
-    return number
-
-
-def _money(value, label):
-    text = str(value or "").replace(",", "").replace(" ", "").strip()
-    try:
-        amount = Decimal(text).quantize(Decimal("0.01"))
-    except InvalidOperation:
-        raise FormError(f"{label}: enter an amount, like 1290000.")
-    if amount < 0 or amount > Decimal("9999999999"):
-        raise FormError(f"{label}: enter an amount, like 1290000.")
-    return amount
-
-
-def _words(text):
-    return [w for w in text.split() if w.strip("-–—|/")]
-
-
-def _slug(name, exclude_id=None):
-    base = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:120] or "product"
-    slug, n = base, 2
-    while True:
-        clash = Product.query.filter(Product.slug == slug)
-        if exclude_id:
-            clash = clash.filter(Product.id != exclude_id)
-        if not clash.first():
-            return slug
-        slug, n = f"{base}-{n}", n + 1
-
-
-def _product_from_form(f, product=None):
-    """Read the Add / Edit form; raises FormError with a clear message when something is wrong."""
-    name = " ".join(f.get("name", "").split())
-    if not name:
-        raise FormError("Give the product a name.")
-    if len(_words(name)) > NAME_WORDS or len(name) > 200:
-        raise FormError(f"Keep the product name to {NAME_WORDS} words or fewer.")
-    short = " ".join(f.get("short", "").split()) or " ".join(_words(name)[:SHORT_WORDS])
-    if len(_words(short)) > SHORT_WORDS or len(short) > 40:
-        raise FormError(f"Keep the short name to {SHORT_WORDS} words or fewer.")
-    category = f.get("category", "")
-    if category not in Category.as_dict():
-        raise FormError("Choose a category.")
-    photos = [line.strip() for line in f.get("photos", "").splitlines() if line.strip()]
-    for url in photos:
-        if not (url.startswith("https://") or url.startswith("/static/")):
-            raise FormError("Photo links must start with https:// (one link per line).")
-    return {
-        "name": name, "short": short, "category": category,
-        "price": _money(f.get("price"), "Price"),
-        "discount": _whole(f.get("discount") or 0, "Discount", 0, 90),
-        "badge": " ".join(f.get("badge", "").split())[:32],
-        "stock": _whole(f.get("stock") or 0, "Units in stock"),
-        "description": f.get("description", "").strip(),
-        "is_active": bool(f.get("is_active")),
-        "photos": photos,
-    }
-
-
-def _apply(product, data):
-    photos = data.pop("photos")
-    for key, value in data.items():
-        setattr(product, key, value)
-    product.category_info = db.session.get(Category, data["category"])      # its SKU code comes from here
-    if [p.url for p in product.photo_rows] != photos:
-        product.photo_rows = [ProductPhoto(url=url, position=k) for k, url in enumerate(photos)]
-
-
-@bp.route("/stock/add", methods=["POST"])
-@login_required
-def product_add():
-    try:
-        data = _product_from_form(request.form)
-        product = Product(slug=_slug(data["name"]),
-                          position=(db.session.query(db.func.max(Product.position)).scalar() or 0) + 1)
-        _apply(product, data)
-        db.session.add(product)
-        db.session.flush()
-        audit("product.add", f"{product.sku} {product.short}")
-        db.session.commit()
-        flash(f"{product.short} added ({product.sku}).", "success")
-    except FormError as e:
-        db.session.rollback()
-        flash(str(e), "error")
-    return redirect(_back(url_for("admin.stock")))
-
-
-@bp.route("/stock/<int:product_id>/edit", methods=["POST"])
-@login_required
-def product_edit(product_id):
-    product = _product_or_404(product_id)
-    try:
-        data = _product_from_form(request.form, product)
-        if data["name"] != product.name:
-            product.slug = _slug(data["name"], exclude_id=product.id)     # the shop address follows the name
-        _apply(product, data)
-        audit("product.edit", f"{product.sku} {product.short}")
-        db.session.commit()
-        flash(f"{product.short} saved.", "success")
-    except FormError as e:
-        db.session.rollback()
-        flash(str(e), "error")
-    return redirect(_back(url_for("admin.stock")))
-
-
-@bp.route("/stock/<int:product_id>/sell", methods=["POST"])
-@login_required
-def product_sell(product_id):
-    """Record a sale made in the shop: an order (paid), and the units come off the stock."""
-    product = _product_or_404(product_id)
-    f = request.form
-    try:
-        qty = _whole(f.get("qty"), "How many", 1, 10000)
-        if qty > product.stock:
-            raise FormError(f"Only {product.stock} {product.short} in stock. Refill it first."
-                            if product.stock else f"{product.short} is sold out. Refill it first.")
-        price = _money(f.get("price"), "Price each")
-        try:
-            sold_on = date.fromisoformat(f.get("sold_on", ""))
-        except ValueError:
-            raise FormError("Choose the date of the sale.")
-        if sold_on > today():
-            raise FormError("The sale date can't be in the future.")
-        order = Order(status="paid", source="shop", sold_on=sold_on, customer=" ".join(f.get("customer", "").split())[:120],
-                      note=f.get("note", "").strip()[:300], created_by=g.user.id)
-        order.items = [OrderItem(product_id=product.id, product_name=product.short, sku=product.sku, qty=qty, unit_price=price)]
-        product.stock -= qty
-        db.session.add(order)
-        db.session.flush()
-        audit("product.sell", f"{order.number}: {qty} × {product.sku} at {price}")
-        db.session.commit()
-        flash(f"Sold {qty} × {product.short}. {product.stock} left.", "success")
-    except FormError as e:
-        db.session.rollback()
-        flash(str(e), "error")
-    return redirect(_back(url_for("admin.stock")))
-
-
-@bp.route("/stock/<int:product_id>/refill", methods=["POST"])
-@login_required
-def product_refill(product_id):
-    """New units of the same product arrived."""
-    product = _product_or_404(product_id)
-    try:
-        qty = _whole(request.form.get("qty"), "How many arrived", 1, 100000)
-        product.stock += qty
-        audit("product.refill", f"+{qty} × {product.sku}")
-        db.session.commit()
-        flash(f"Added {qty} × {product.short}. {product.stock} in stock now.", "success")
-    except FormError as e:
-        db.session.rollback()
-        flash(str(e), "error")
-    return redirect(_back(url_for("admin.stock")))
-
-
-@bp.route("/stock/<int:product_id>/visibility", methods=["POST"])
-@login_required
-def product_visibility(product_id):
-    product = _product_or_404(product_id)
-    product.is_active = not product.is_active
-    audit("product.show" if product.is_active else "product.hide", product.sku)
-    db.session.commit()
-    flash(f"{product.short} is {'back in' if product.is_active else 'hidden from'} the shop.", "success")
-    return redirect(_back(url_for("admin.stock")))
+# the pages live in their own files; importing them adds their routes to this blueprint
+from . import admin_dashboard, admin_settings, admin_stock  # noqa: E402,F401

@@ -4,7 +4,10 @@ The starting content of the site. It is copied into the database once, when the 
 change rows there (and, soon, in the admin pages); this file is no longer read.
 """
 from .extensions import db
-from .models import Category, HeroSlide, PortfolioItem, Product, ProductPhoto, Service, Setting
+from datetime import date
+from decimal import Decimal
+
+from .models import Category, HeroSlide, PortfolioItem, Product, ProductPhoto, Service, Setting, StockMove
 
 
 def unsplash(photo_id, width=1000):
@@ -226,7 +229,13 @@ def load_demo():
                            discount=p["discount"], badge=p["badge"], stock=p["stock"], description=p["description"],
                            position=pos)
             item.photo_rows = [ProductPhoto(url=url, position=k) for k, url in enumerate(p["photos"])]
+            item.cost = (Decimal(p["price"]) * Decimal("0.8")).quantize(Decimal("1"))   # example buying price
             db.session.add(item)
+            db.session.flush()
+            # the starting units count as stock bought, so the dashboard has a start
+            db.session.add(StockMove(product_id=item.id, product_name=item.short, sku=f"{dict((c[0], c[3]) for c in CATEGORIES)[item.category]}-{item.id:04d}",
+                                     kind="added", qty=item.stock, unit_cost=item.cost, amount=item.cost * item.stock,
+                                     reason="Starting stock", happened_on=date.today()))
         added.append(f"{len(PRODUCTS)} products")
     if not Service.query.first():
         for pos, s in enumerate(SERVICES):

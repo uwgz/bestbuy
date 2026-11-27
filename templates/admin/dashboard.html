@@ -1,0 +1,163 @@
+{% extends "admin/base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block crumb %}Dashboard{% endblock %}
+{% set card = "rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900" %}
+{% set muted = "text-zinc-500 dark:text-zinc-400" %}
+{% macro short(v) %}{% set v = v|float %}{% if v >= 1000000 %}{{ "%.1f"|format(v / 1000000)|replace(".0", "") }}M{% elif v >= 1000 %}{{ "%.0f"|format(v / 1000) }}K{% else %}{{ "%.0f"|format(v) }}{% endif %}{% endmacro %}
+{% macro tile(ic, label, value, note, tone="") %}
+  <div class="{{ card }}">
+    <div class="flex items-center gap-2.5 text-sm font-medium {{ muted }}">
+      <span class="grid size-8 place-items-center rounded-lg {{ tone or 'bg-zinc-100 text-zinc-600 dark:bg-white/[.06] dark:text-zinc-300' }}">{{ icon(ic, "size-4") }}</span>{{ label }}
+    </div>
+    <p class="mt-3 text-[26px] font-semibold leading-none tracking-tight tabular-nums">{{ value }}</p>
+    <p class="mt-2 text-[13px] {{ muted }}">{{ note }}</p>
+  </div>
+{% endmacro %}
+{% set kinds = {"sale": ("Sale", "bg-brand/10 text-brand"), "refill": ("Refill", "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"),
+                "added": ("New product", "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"),
+                "return": ("Return", "bg-amber-500/15 text-amber-700 dark:text-amber-400"), "loss": ("Loss", "bg-red-500/10 text-red-700 dark:text-red-400")} %}
+
+{% block content %}
+<div class="flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="text-[28px] leading-tight">Hello, {{ admin_user }}</h1>
+    <p class="mt-1 text-[15px] {{ muted }}">How the shop is doing · {{ ("last " ~ periods[period][0]|lower) if period != "all" else "since the start" }}.</p>
+  </div>
+  <nav class="flex rounded-xl bg-zinc-200/70 p-1 dark:bg-white/[.06]" aria-label="Period">
+    {% for key, (label, _d) in periods.items() %}
+      <a href="{{ url_for('admin.dashboard', period=key) }}"{{ ' aria-current="page"' if key == period }}
+         class="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm transition {{ 'bg-white font-semibold shadow-sm dark:bg-zinc-700' if key == period else 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white' }}">{{ label }}</a>
+    {% endfor %}
+  </nav>
+</div>
+
+{# ---------- money in the period ---------- #}
+<div class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  {{ tile("chart", "Sales", money(flow.sales), flow.units_sold ~ " unit" ~ ("s" if flow.units_sold != 1) ~ " sold · " ~ flow.orders ~ " sale" ~ ("s" if flow.orders != 1), "bg-brand/10 text-brand") }}
+  {{ tile("star", "Profit", money(flow.profit), (flow.margin ~ "% of sales, after buying price, losses and refunds") if flow.sales else "Appears after the first sale", "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400") }}
+  {{ tile("package", "Stock bought", money(flow.bought), flow.units_bought ~ " unit" ~ ("s" if flow.units_bought != 1) ~ " added or refilled") }}
+  {{ tile("undo", "Losses & returns", money(flow.losses + flow.refunds), flow.units_lost ~ " lost · " ~ flow.units_returned ~ " returned · " ~ money(flow.refunds) ~ " refunded", "bg-red-500/10 text-red-700 dark:text-red-400") }}
+</div>
+
+<div class="mt-4 grid gap-4 xl:grid-cols-3">
+  {# ---------- sales chart ---------- #}
+  <section class="{{ card }} flex flex-col xl:col-span-2">
+    {% set top = (bars|map(attribute="value")|max) if bars else 0 %}
+    <div class="flex items-baseline justify-between gap-4">
+      <h2 class="text-[17px] font-semibold">Sales</h2>
+      <p class="text-sm {{ muted }}">{{ "Per day" if period in ("7d", "30d") else "Per week" if period == "3m" else "Per month" }} · {{ store.currency }}</p>
+    </div>
+    {% if top %}
+      {% set every = ((bars|length) / 8)|round(0, "ceil")|int or 1 %}
+      <div class="relative mt-5 min-h-56 flex-1 pl-10">
+        {% for f in (1, 0.5, 0) %}
+          <div class="absolute inset-x-0 border-t border-dashed border-zinc-200 dark:border-zinc-800 {{ 'border-solid' if not f }}" style="bottom: calc({{ f * 100 }}% * 0.86 + 1.5rem)">
+            <span class="absolute -top-2.5 left-0 text-[11px] tabular-nums text-zinc-400">{{ short((top|float) * f) }}</span>
+          </div>
+        {% endfor %}
+        <div class="absolute inset-y-0 left-10 right-0 flex items-end gap-0.5">
+          {% for b in bars %}
+            <div class="group relative flex h-full min-w-0 flex-1 flex-col justify-end outline-none" tabindex="0">
+              {% set side = "left-0" if loop.index0 < 3 else "right-0" if loop.revindex0 < 3 else "left-1/2 -translate-x-1/2" %}
+              <div class="flex h-[86%] items-end justify-center"><div class="relative w-full max-w-7 rounded-t-[4px] bg-brand/85 transition group-hover:bg-brand group-focus:bg-brand" style="height: {{ [((b.value|float) / (top|float) * 100), 1.5 if b.value else 0]|max }}%">
+                <span class="pointer-events-none absolute bottom-full {{ side }} z-10 mb-2 hidden whitespace-nowrap rounded-lg bg-zinc-900 px-2.5 py-1.5 text-xs text-white shadow-lg group-hover:block group-focus:block dark:bg-white dark:text-zinc-900"><b class="tabular-nums">{{ money(b.value) }}</b> · {{ b.label }}</span>
+              </div></div>
+              <span class="relative mt-2 h-4"><span class="absolute left-1/2 -translate-x-1/2 whitespace-nowrap text-[11px] text-zinc-400 {{ 'max-sm:hidden' if (loop.index0 // every) % 2 }}">{{ b.label if loop.index0 % every == 0 }}</span></span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% else %}
+      <div class="mt-5 grid min-h-56 flex-1 place-items-center rounded-xl border border-dashed border-zinc-200 text-center text-sm {{ muted }} dark:border-zinc-800">No sales in this period yet.<br>Record one with Sell on the Stock page.</div>
+    {% endif %}
+  </section>
+
+  {# ---------- stock right now ---------- #}
+  <section class="{{ card }}">
+    <h2 class="text-[17px] font-semibold">In stock now</h2>
+    <p class="mt-4 text-[40px] font-semibold leading-none tracking-tight tabular-nums">{{ "{:,}".format(now.units) }}<span class="ml-2 text-base font-medium {{ muted }}">units</span></p>
+    <p class="mt-2 text-sm {{ muted }}">across {{ now.in_stock }} of {{ now.products }} products</p>
+    <dl class="mt-5 space-y-2 rounded-xl bg-zinc-100 p-4 text-sm dark:bg-white/[.04]">
+      <div class="flex justify-between gap-3"><dt class="{{ muted }}">You paid</dt><dd class="font-semibold tabular-nums">{{ money(now.value_cost) }}</dd></div>
+      <div class="flex justify-between gap-3"><dt class="{{ muted }}">Sells for</dt><dd class="font-semibold tabular-nums">{{ money(now.value_price) }}</dd></div>
+      <div class="flex justify-between gap-3 border-t border-zinc-200 pt-2 dark:border-zinc-700"><dt class="{{ muted }}">Profit waiting</dt><dd class="font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">{{ money(now.value_price - now.value_cost) }}</dd></div>
+    </dl>
+    <ul class="mt-4 space-y-2 border-t border-zinc-100 pt-4 text-sm dark:border-zinc-800">
+      {% for label, value, dot in [("Low (" ~ 2 ~ " or fewer)", now.low, "bg-amber-500"), ("Sold out", now.sold_out, "bg-red-500"), ("On sale", now.on_sale, "bg-brand"), ("Hidden from the shop", now.hidden, "bg-zinc-400")] %}
+        <li class="flex items-center justify-between"><span class="flex items-center gap-2.5"><span class="size-2 rounded-full {{ dot }}"></span>{{ label }}</span><b class="tabular-nums">{{ value }}</b></li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+
+<div class="mt-4 grid gap-4 lg:grid-cols-3">
+  {# ---------- top sellers ---------- #}
+  <section class="{{ card }}">
+    <h2 class="text-[17px] font-semibold">Best sellers</h2>
+    {% if top_sellers %}
+      {% set most = top_sellers[0].units %}
+      <ol class="mt-4 space-y-3.5">
+        {% for t in top_sellers %}
+          <li>
+            <div class="flex items-baseline justify-between gap-3 text-sm"><span class="min-w-0 truncate"><span class="mr-2 tabular-nums text-zinc-400">{{ loop.index }}</span><b class="font-medium">{{ t.name }}</b></span><span class="shrink-0 tabular-nums {{ muted }}">{{ t.units }} sold</span></div>
+            <div class="mt-1.5 flex items-center gap-3"><div class="h-1.5 flex-1 rounded-full bg-zinc-100 dark:bg-white/[.06]"><div class="h-full rounded-full bg-brand" style="width: {{ (t.units / most * 100)|round }}%"></div></div><span class="shrink-0 whitespace-nowrap text-right text-xs tabular-nums {{ muted }}">{{ money(t.money) }}</span></div>
+          </li>
+        {% endfor %}
+      </ol>
+    {% else %}<p class="mt-4 text-sm {{ muted }}">Nothing sold in this period.</p>{% endif %}
+  </section>
+
+  {# ---------- sales by category ---------- #}
+  <section class="{{ card }}">
+    <h2 class="text-[17px] font-semibold">Sales by category</h2>
+    {% if category_sales %}
+      {% set whole = category_sales|sum(attribute=1) %}
+      <ul class="mt-4 space-y-3.5">
+        {% for label, value in category_sales[:6] %}
+          {% set share = (value / whole * 100)|round|int %}
+          <li>
+            <div class="flex items-baseline justify-between gap-3 text-sm"><span class="truncate font-medium">{{ label }}</span><span class="shrink-0 tabular-nums {{ muted }}">{{ money(value) }} · {{ share }}%</span></div>
+            <div class="mt-1.5 h-1.5 rounded-full bg-zinc-100 dark:bg-white/[.06]"><div class="h-full rounded-full bg-brand/70" style="width: {{ [share, 2]|max }}%"></div></div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}<p class="mt-4 text-sm {{ muted }}">Nothing sold in this period.</p>{% endif %}
+  </section>
+
+  {# ---------- running low ---------- #}
+  <section class="{{ card }}">
+    <h2 class="text-[17px] font-semibold">Refill soon</h2>
+    {% if running_low %}
+      <ul class="mt-3 divide-y divide-zinc-100 dark:divide-zinc-800">
+        {% for p in running_low %}
+          <li class="flex items-center gap-3 py-2.5">
+            <span class="relative size-9 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800"><span class="absolute inset-0 grid place-items-center text-zinc-400">{{ icon(p.icon, "size-4") }}</span><img src="{{ p.image }}" alt="" loading="lazy" onerror="this.remove()" class="relative size-full object-cover"></span>
+            <span class="min-w-0 flex-1"><span class="block truncate text-sm font-medium">{{ p.short }}</span><span class="block text-xs text-zinc-400">{{ p.sku }}</span></span>
+            <span class="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold {{ 'bg-red-500/10 text-red-700 dark:text-red-400' if not p.stock else 'bg-amber-500/15 text-amber-700 dark:text-amber-400' }}">{{ "Sold out" if not p.stock else p.stock ~ " left" }}</span>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}<p class="mt-4 flex items-center gap-2 text-sm {{ muted }}">{{ icon("check", "size-4 text-emerald-600") }} Every product has more than 2 units.</p>{% endif %}
+  </section>
+</div>
+
+{# ---------- latest activity ---------- #}
+<section class="mt-4 rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+  <h2 class="px-5 pt-5 text-[17px] font-semibold">Latest activity</h2>
+  {% if recent %}
+    <ul class="mt-3 divide-y divide-zinc-100 dark:divide-zinc-800">
+      {% for m in recent %}
+        {% set k = kinds.get(m.kind, (m.kind, "bg-zinc-100")) %}
+        <li class="grid grid-cols-[96px_minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 sm:grid-cols-[110px_minmax(0,1fr)_80px_150px_90px]">
+          <span><span class="rounded-full px-2.5 py-0.5 text-xs font-semibold {{ k[1] }}">{{ k[0] }}</span></span>
+          <span class="min-w-0"><span class="block truncate text-sm font-medium">{{ m.product_name }}</span><span class="block truncate text-xs text-zinc-400">{{ m.sku }}{{ " · " ~ m.reason if m.reason }}</span></span>
+          <span class="text-right text-sm font-semibold tabular-nums {{ 'text-emerald-700 dark:text-emerald-400' if m.qty > 0 else '' }}">{{ "+" if m.qty > 0 }}{{ m.qty }}</span>
+          <span class="hidden text-right text-sm tabular-nums sm:block">{{ money(m.amount) if m.amount else "—" }}</span>
+          <span class="hidden text-right text-xs text-zinc-400 sm:block">{{ m.happened_on.strftime("%b") }} {{ m.happened_on.day }}</span>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}<p class="px-5 pb-5 pt-3 text-sm {{ muted }}">Nothing yet.</p>{% endif %}
+  <div class="h-2"></div>
+</section>
+{% endblock %}

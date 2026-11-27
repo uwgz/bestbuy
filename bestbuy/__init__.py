@@ -31,6 +31,7 @@ def create_app(overrides=None):
         from . import models  # noqa: F401  (registers the tables)
         _move_old_site_tables()
         db.create_all()                      # makes any missing tables; never changes existing ones
+        _add_new_columns()
         if app.config.get("AUTO_LOAD_DEMO"):
             _load_demo_if_empty()
     return app
@@ -63,6 +64,26 @@ def _move_old_site_tables():
         for name in OLD_SITE_TABLES:
             conn.execute(text(f'ALTER TABLE IF EXISTS "{name}" SET SCHEMA {OLD_SCHEMA}'))
     print(f"Moved the earlier site's tables into the '{OLD_SCHEMA}' schema (nothing deleted).")
+
+
+# Columns added after their table was first made: (table, column, SQL type and default)
+NEW_COLUMNS = [
+    ("products", "cost", "NUMERIC(12, 2) NOT NULL DEFAULT 0"),
+    ("order_items", "unit_cost", "NUMERIC(12, 2) NOT NULL DEFAULT 0"),
+]
+
+
+def _add_new_columns():
+    """create_all() never changes a table that exists, so add new columns to existing tables here."""
+    from sqlalchemy import inspect, text
+    inspector = inspect(db.engine)
+    for table, column, kind in NEW_COLUMNS:
+        if table in inspector.get_table_names() and column not in {c["name"] for c in inspector.get_columns(table)}:
+            try:
+                with db.engine.begin() as conn:
+                    conn.execute(text(f'ALTER TABLE {table} ADD COLUMN {column} {kind}'))
+            except Exception:            # another server added it at the same moment
+                pass
 
 
 def _load_demo_if_empty():

@@ -9,6 +9,7 @@ Database tables. Every page reads its content from here; nothing is hard-coded i
     HeroSlide      the home page slideshow
     User           people who can sign in to /admin
     Order          a sale; OrderItem holds what was sold
+    StockMove      every change to stock: added, refill, sale, return, loss
     AuditLog       who did what, and when
 """
 from datetime import datetime, timezone
@@ -48,13 +49,25 @@ STORE_DEFAULTS = {
     "phone": "",
     "email": "",
     "address": "",
-    "hours": "",
+    "hours": "",              # made from the three below when they are set
+    "hours_week": "",         # Monday to Friday, e.g. "08:00-19:00" ("" = closed)
+    "hours_sat": "",
+    "hours_sun": "",
     "map_url": "",
     "instagram": "",
     "facebook": "",
     "tiktok": "",
     "slide_seconds": "6",     # how long each home slide stays
 }
+
+
+def opening_hours_text(values):
+    """ "Mon–Fri 08:00–19:00 · Sat 09:00–17:00 · Sun closed" from the three settings."""
+    parts = []
+    for key, label in (("hours_week", "Mon–Fri"), ("hours_sat", "Sat"), ("hours_sun", "Sun")):
+        value = values.get(key) or ""
+        parts.append(f"{label} {value.replace('-', '–')}" if value else f"{label} closed")
+    return " · ".join(parts)
 
 
 class Setting(db.Model):
@@ -74,6 +87,8 @@ class Setting(db.Model):
             values.update({s.key: s.value for s in Setting.query.all()})
             values["decimals"] = int(values.get("decimals") or 0)
             values["slide_seconds"] = int(values.get("slide_seconds") or 6)
+            if any(values.get(k) for k in ("hours_week", "hours_sat", "hours_sun")):
+                values["hours"] = opening_hours_text(values)
             g.store = values
         return g.store
 
@@ -116,7 +131,8 @@ class Product(TimestampMixin, OrderedMixin, db.Model):
     category = db.Column(db.String(32), db.ForeignKey("categories.key", ondelete="RESTRICT"), nullable=False, index=True)
     name = db.Column(db.String(200), nullable=False)
     short = db.Column(db.String(40), nullable=False)
-    price = db.Column(db.Numeric(12, 2), nullable=False)        # before discount
+    price = db.Column(db.Numeric(12, 2), nullable=False)        # selling price, before discount
+    cost = db.Column(db.Numeric(12, 2), nullable=False, default=0)   # what one unit cost you (average of what you bought)
     discount = db.Column(db.Integer, nullable=False, default=0)  # % off; 0 = not on sale
     badge = db.Column(db.String(32), nullable=False, default="")  # New, Best seller, Deal …
     stock = db.Column(db.Integer, nullable=False, default=0)      # units in the shop
@@ -284,12 +300,43 @@ class OrderItem(db.Model):
     sku = db.Column(db.String(16), nullable=False, default="")
     qty = db.Column(db.Integer, nullable=False)
     unit_price = db.Column(db.Numeric(12, 2), nullable=False)
+    unit_cost = db.Column(db.Numeric(12, 2), nullable=False, default=0)   # what it cost you: for profit
 
     order = db.relationship("Order", back_populates="items")
 
     @property
     def line_total(self):
         return Decimal(self.unit_price) * self.qty
+
+    @property
+    def line_cost(self):
+        return Decimal(self.unit_cost or 0) * self.qty
+
+
+class StockMove(db.Model):
+    """Every change to a product's units, so stock can be followed and counted:
+         added   a new product's first units (stock bought)      qty > 0, amount = what you paid
+         refill  more units bought                               qty > 0, amount = what you paid
+         sale    sold with "Sell"                                qty < 0, amount = money received
+         return  a customer brought it back (back on the shelf)  qty > 0, amount = money given back
+         loss    damaged, lost or stolen (written off)           qty < 0, amount = what it had cost you"""
+
+    __tablename__ = "stock_moves"
+    __table_args__ = (db.CheckConstraint("kind IN ('added', 'refill', 'sale', 'return', 'loss')", name="ck_stock_moves_kind"),)
+
+    id = db.Column(db.Integer, primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey("products.id", ondelete="SET NULL"), index=True)
+    product_name = db.Column(db.String(40), nullable=False)       # short name at the time
+    sku = db.Column(db.String(16), nullable=False, default="")
+    kind = db.Column(db.String(10), nullable=False, index=True)
+    qty = db.Column(db.Integer, nullable=False)                    # + into stock, - out of stock
+    unit_cost = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    reason = db.Column(db.String(300), nullable=False, default="")
+    happened_on = db.Column(db.Date, nullable=False, index=True)
+    order_id = db.Column(db.Integer, db.ForeignKey("orders.id", ondelete="SET NULL"))
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    created_at = db.Column(db.DateTime(timezone=True), default=utcnow, nullable=False)
 
 
 class AuditLog(db.Model):

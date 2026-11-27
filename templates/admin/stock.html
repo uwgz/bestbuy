@@ -8,7 +8,10 @@
     <h1 class="text-[28px] leading-tight">Stock</h1>
     <p class="mt-1 text-[15px] text-zinc-500 dark:text-zinc-400">Your products and how many are on the shelves.</p>
   </div>
-  <button type="button" data-dialog="product" class="btn rounded-xl px-4">{{ icon("plus", "size-4") }} Add product</button>
+  <div class="flex gap-2">
+    <button type="button" data-dialog="return" class="inline-flex h-11 items-center gap-2 rounded-xl border border-zinc-300 px-4 text-[15px] font-medium hover:border-zinc-500 dark:border-zinc-700 dark:hover:border-zinc-500">{{ icon("undo", "size-4") }} Return / loss</button>
+    <button type="button" data-dialog="product" class="btn h-11 rounded-xl px-4">{{ icon("plus", "size-4") }} Add product</button>
+  </div>
 </div>
 
 {# categories: one line #}
@@ -23,13 +26,13 @@
 
 {# products #}
 <div class="mt-5 overflow-hidden rounded-2xl border border-zinc-200 dark:border-zinc-800">
-  <div class="hidden grid-cols-[minmax(0,1fr)_130px_110px_250px] gap-4 border-b border-zinc-200 bg-zinc-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 md:grid dark:border-zinc-800 dark:bg-white/[.03] dark:text-zinc-400">
+  <div class="hidden grid-cols-[minmax(0,1fr)_130px_100px_340px] gap-4 border-b border-zinc-200 bg-zinc-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 md:grid dark:border-zinc-800 dark:bg-white/[.03] dark:text-zinc-400">
     <span>Product</span><span>Price</span><span>In stock</span><span class="text-right">Actions</span>
   </div>
   <ul class="divide-y divide-zinc-200 dark:divide-zinc-800">
     {% if not items %}<li class="px-5 py-12 text-center text-zinc-500">No products here yet.</li>{% endif %}
     {% for p in items %}
-      <li class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 px-4 py-3.5 sm:px-5 md:grid-cols-[minmax(0,1fr)_130px_110px_250px]">
+      <li class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 px-4 py-3.5 sm:px-5 md:grid-cols-[minmax(0,1fr)_130px_100px_340px]">
         <div class="flex min-w-0 items-center gap-3.5">
           <span class="relative size-12 shrink-0 overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800">
             <span class="absolute inset-0 grid place-items-center text-zinc-400">{{ icon(p.icon, "size-5") }}</span>
@@ -44,28 +47,28 @@
           {% if p.on_sale %}<p class="font-semibold text-sale">{{ money(p.final_price) }}</p><p class="text-xs text-zinc-400"><s>{{ money(p.price) }}</s> · −{{ p.discount }}%</p>
           {% else %}<p class="font-semibold">{{ money(p.price) }}</p>{% endif %}
         </div>
-        <div class="col-span-2 flex items-center justify-between gap-3 md:col-span-1 md:block">
+        <div class="col-span-2 flex flex-wrap items-center gap-x-3 gap-y-2.5 md:col-span-1 md:block">
           {% if p.stock == 0 %}<span class="inline-flex items-center gap-1.5 rounded-full bg-sale/10 px-2.5 py-1 text-[13px] font-semibold text-sale"><span class="size-1.5 rounded-full bg-sale"></span>Sold out</span>
           {% elif p.stock <= 2 %}<span class="inline-flex items-center gap-1.5 rounded-full bg-amber-500/12 px-2.5 py-1 text-[13px] font-semibold text-amber-600 dark:text-amber-400"><span class="size-1.5 rounded-full bg-amber-500"></span>{{ p.stock }} left</span>
           {% else %}<span class="text-[15px] tabular-nums">{{ p.stock }}<span class="text-zinc-500 md:hidden dark:text-zinc-400"> in stock</span></span>{% endif %}
           {# actions sit here on phones #}
-          <div class="flex items-center gap-1.5 md:hidden">{% include "admin/_stock_actions.html" %}</div>
+          <div class="flex w-full items-center gap-1.5 md:hidden [&>button:nth-child(-n+3)]:flex-1">{% include "admin/_stock_actions.html" %}</div>
         </div>
         <div class="hidden items-center justify-end gap-1.5 md:flex">{% include "admin/_stock_actions.html" %}</div>
       </li>
     {% endfor %}
   </ul>
 </div>
-<p class="mt-4 text-[13px] text-zinc-500 dark:text-zinc-400"><b class="text-zinc-700 dark:text-zinc-300">Sell</b> records a sale and takes the units off · <b class="text-zinc-700 dark:text-zinc-300">Refill</b> adds units that arrived · the eye hides or shows a product in the shop.</p>
+<p class="mt-4 text-[13px] text-zinc-500 dark:text-zinc-400"><b class="text-zinc-700 dark:text-zinc-300">Sell</b> records a sale · <b class="text-zinc-700 dark:text-zinc-300">Refill</b> adds units you bought · <b class="text-zinc-700 dark:text-zinc-300">Photos &amp; %</b> sets the pictures and discount · the eye hides or shows a product in the shop.</p>
 {% endblock %}
 
 {% block dialogs %}
 {% set dlg = "m-auto w-[min(540px,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-0 text-zinc-900 shadow-2xl backdrop:bg-black/55 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100" %}
 {% set lbl = "block text-sm font-medium text-zinc-700 dark:text-zinc-300" %}
 {% set fld = "field mt-1.5 rounded-lg py-2" %}
-{% macro head(title_attr) %}
+{% macro head(title) %}
   <div class="flex items-center justify-between gap-4 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
-    <h2 class="text-lg" data-title>{{ title_attr }}</h2>
+    <h2 class="text-lg" data-title>{{ title }}</h2>
     <button type="button" data-close class="grid size-8 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10" aria-label="Close">{{ icon("x", "size-4") }}</button>
   </div>
 {% endmacro %}
@@ -87,10 +90,9 @@
         <label class="{{ lbl }}">Price each ({{ store.currency }})<input name="price" required inputmode="decimal" class="{{ fld }}" data-price></label>
       </div>
       <div class="grid grid-cols-2 gap-3">
-        <label class="{{ lbl }}">Date<input name="sold_on" type="date" value="{{ today }}" max="{{ today }}" required class="{{ fld }}"></label>
-        <label class="{{ lbl }}">Customer <span class="font-normal text-zinc-400">(optional)</span><input name="customer" maxlength="120" class="{{ fld }}" placeholder="Name or phone"></label>
+        <label class="{{ lbl }}">Date<input name="day" type="date" value="{{ today }}" max="{{ today }}" required class="{{ fld }}"></label>
+        <label class="{{ lbl }}">Customer<input name="customer" maxlength="120" required class="{{ fld }}" placeholder="Name or phone"></label>
       </div>
-      <label class="{{ lbl }}">Note <span class="font-normal text-zinc-400">(optional)</span><input name="note" maxlength="300" class="{{ fld }}" placeholder="Paid with MoMo…"></label>
       <p class="flex items-baseline justify-between rounded-xl bg-zinc-100 px-4 py-3 dark:bg-white/5">
         <span class="text-sm text-zinc-500 dark:text-zinc-400" data-stock-note></span>
         <span class="text-sm">Total <b class="ml-1 text-lg tabular-nums" data-total>—</b></span>
@@ -100,44 +102,87 @@
   </form>
 </dialog>
 
-{# Refill: more units of the same product arrived #}
+{# Refill: more units of the same product bought #}
 <dialog id="dlg-refill" class="{{ dlg }}" data-action="{{ url_for('admin.product_refill', product_id=0) }}">
   <form method="post">{{ hidden_fields }}
     {{ head("Refill") }}
     <div class="space-y-4 px-5 py-5">
-      <label class="{{ lbl }}">How many arrived<input name="qty" type="number" min="1" value="1" required inputmode="numeric" class="{{ fld }}"></label>
-      <p class="text-sm text-zinc-500 dark:text-zinc-400" data-stock-note></p>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="{{ lbl }}">How many arrived<input name="qty" type="number" min="1" value="1" required inputmode="numeric" class="{{ fld }}" data-qty></label>
+        <label class="{{ lbl }}">Buying price each ({{ store.currency }})<input name="cost" required inputmode="decimal" class="{{ fld }}" data-cost></label>
+      </div>
+      <label class="{{ lbl }}">Date<input name="day" type="date" value="{{ today }}" max="{{ today }}" required class="{{ fld }}"></label>
+      <p class="flex items-baseline justify-between rounded-xl bg-zinc-100 px-4 py-3 dark:bg-white/5">
+        <span class="text-sm text-zinc-500 dark:text-zinc-400" data-stock-note></span>
+        <span class="text-sm">You paid <b class="ml-1 text-lg tabular-nums" data-total>—</b></span>
+      </p>
     </div>
     {{ foot("Add to stock") }}
   </form>
 </dialog>
 
-{# Add / Edit a product #}
-<dialog id="dlg-product" class="{{ dlg }} w-[min(640px,calc(100vw-2rem))]" data-add="{{ url_for('admin.product_add') }}" data-action="{{ url_for('admin.product_edit', product_id=0) }}">
+{# Photos and discount: filled in later, so they may stay empty #}
+<dialog id="dlg-media" class="{{ dlg }}" data-action="{{ url_for('admin.product_media', product_id=0) }}">
+  <form method="post">{{ hidden_fields }}
+    {{ head("Photos & discount") }}
+    <div class="space-y-4 px-5 py-5">
+      <label class="{{ lbl }}">Photos <span class="font-normal text-zinc-400">(one link per line; the first is the cover)</span>
+        <textarea name="photos" rows="4" class="{{ fld }} font-mono text-[13px]" placeholder="https://images.unsplash.com/photo-…"></textarea></label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="{{ lbl }}">Discount (%)<input name="discount" type="number" min="0" max="90" value="0" required class="{{ fld }}"></label>
+        <label class="{{ lbl }}">Label on the photo<input name="badge" maxlength="32" class="{{ fld }}" placeholder="New, Best seller, Deal"></label>
+      </div>
+      <p class="text-sm text-zinc-500 dark:text-zinc-400">0% = no sale. Leave the label empty for none.</p>
+    </div>
+    {{ foot("Save") }}
+  </form>
+</dialog>
+
+{# Add / Edit a product: no scrolling, every field required #}
+<dialog id="dlg-product" class="{{ dlg }} w-[min(620px,calc(100vw-2rem))]" data-add="{{ url_for('admin.product_add') }}" data-action="{{ url_for('admin.product_edit', product_id=0) }}">
   <form method="post">{{ hidden_fields }}
     {{ head("Add a product") }}
     <div class="space-y-4 px-5 py-5">
-      <label class="{{ lbl }}">Product name <span class="font-normal text-zinc-400">(up to 20 words, on the product page)</span>
+      <label class="{{ lbl }}">Product name <span class="font-normal text-zinc-400">(up to 20 words)</span>
         <input name="name" required maxlength="200" class="{{ fld }}" placeholder="Apple iPhone 17 Pro 256GB - Cosmic Orange"></label>
       <div class="grid grid-cols-2 gap-3">
-        <label class="{{ lbl }}">Short name <span class="font-normal text-zinc-400">(up to 4 words)</span><input name="short" maxlength="40" class="{{ fld }}" placeholder="iPhone 17 Pro"></label>
-        <label class="{{ lbl }}">Category<select name="category" required class="{{ fld }}">{% for key, (label, _i, _c) in categories.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+        <label class="{{ lbl }}">Short name <span class="font-normal text-zinc-400">(up to 4 words)</span><input name="short" required maxlength="40" class="{{ fld }}" placeholder="iPhone 17 Pro"></label>
+        <label class="{{ lbl }}">Category<select name="category" required class="{{ fld }}"><option value="">Choose…</option>{% for key, (label, _i, _c) in categories.items() %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>
       </div>
       <div class="grid grid-cols-2 gap-3">
-        <label class="{{ lbl }}">Price ({{ store.currency }})<input name="price" required inputmode="decimal" class="{{ fld }}" placeholder="1950000"></label>
-        <label class="{{ lbl }}">Discount (%)<input name="discount" type="number" min="0" max="90" value="0" class="{{ fld }}"></label>
+        <label class="{{ lbl }}">Selling price ({{ store.currency }})<input name="price" required inputmode="decimal" class="{{ fld }}" placeholder="1950000"></label>
+        <label class="{{ lbl }}">Buying price each ({{ store.currency }})<input name="cost" required inputmode="decimal" class="{{ fld }}" placeholder="1600000"></label>
       </div>
-      <div class="grid grid-cols-2 gap-3">
-        <label class="{{ lbl }}">Units in stock<input name="stock" type="number" min="0" value="1" required class="{{ fld }}"></label>
-        <label class="{{ lbl }}">Label <span class="font-normal text-zinc-400">(optional)</span><input name="badge" maxlength="32" class="{{ fld }}" placeholder="New, Best seller, Deal"></label>
-      </div>
+      <label class="{{ lbl }}" data-units>Units bought<input name="stock" type="number" min="1" value="1" required class="{{ fld }}"></label>
       <label class="{{ lbl }}">Description <span class="font-normal text-zinc-400">(lines starting with "- " become bullet points)</span>
-        <textarea name="description" rows="4" class="{{ fld }}" placeholder="What it is and who it's for.&#10;- 256GB storage&#10;- 6.3&quot; display"></textarea></label>
-      <label class="{{ lbl }}">Photos <span class="font-normal text-zinc-400">(one link per line; the first is the cover)</span>
-        <textarea name="photos" rows="2" class="{{ fld }} font-mono text-[13px]" placeholder="https://images.unsplash.com/photo-…"></textarea></label>
-      <label class="flex items-center gap-2.5 text-[15px]"><input type="checkbox" name="is_active" value="1" checked class="size-4 accent-brand"> Visible in the shop</label>
+        <textarea name="description" rows="3" required class="{{ fld }}" placeholder="What it is and who it's for.&#10;- 256GB storage"></textarea></label>
     </div>
     {{ foot("Add product") }}
+  </form>
+</dialog>
+
+{# Return / loss #}
+<dialog id="dlg-return" class="{{ dlg }}" data-add="{{ url_for('admin.stock_return') }}">
+  <form method="post">{{ hidden_fields }}
+    {{ head("Return / loss") }}
+    <div class="space-y-4 px-5 py-5">
+      <div class="grid grid-cols-2 gap-3" role="radiogroup" aria-label="What happened">
+        {% for value, title, note in [("return", "Customer returned it", "Back on the shelf; you gave money back"), ("loss", "Damaged or lost", "Written off; it costs you its buying price")] %}
+          <label class="cursor-pointer rounded-xl border border-zinc-200 p-3 has-checked:border-brand has-checked:bg-brand/5 dark:border-zinc-700">
+            <input type="radio" name="kind" value="{{ value }}" required class="sr-only" data-kind>
+            <span class="block text-[15px] font-semibold">{{ title }}</span><span class="mt-0.5 block text-[13px] text-zinc-500 dark:text-zinc-400">{{ note }}</span>
+          </label>
+        {% endfor %}
+      </div>
+      <label class="{{ lbl }}">Product<select name="product_id" required class="{{ fld }}"><option value="">Choose…</option>{% for p in all_products %}<option value="{{ p.id }}">{{ p.short }} · {{ p.sku }} · {{ p.stock }} in stock</option>{% endfor %}</select></label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="{{ lbl }}">How many<input name="qty" type="number" min="1" value="1" required class="{{ fld }}"></label>
+        <label class="{{ lbl }}">Date<input name="day" type="date" value="{{ today }}" max="{{ today }}" required class="{{ fld }}"></label>
+      </div>
+      <label class="{{ lbl }}" data-refund hidden>Money given back ({{ store.currency }})<input name="refund" inputmode="decimal" class="{{ fld }}" placeholder="0 if none"></label>
+      <label class="{{ lbl }}">Reason<input name="reason" required maxlength="300" class="{{ fld }}" placeholder="Screen cracked in transport, wrong size…"></label>
+    </div>
+    {{ foot("Save") }}
   </form>
 </dialog>
 
@@ -145,36 +190,50 @@
   (() => {
     const fmt = n => `{{ store.currency }} ${Number(n).toLocaleString("en-US", { maximumFractionDigits: {{ store.decimals }} })}`;
     const qs = (el, s) => el.querySelector(s);
+    const num = v => Number(String(v || "").replace(/[, ]/g, ""));
+    const totalOf = (dlg, priceSel) => { const t = num(qs(dlg, "[data-qty]").value) * num(qs(dlg, priceSel).value); qs(dlg, "[data-total]").textContent = t > 0 ? fmt(t) : "—"; };
     document.addEventListener("click", e => {
       const btn = e.target.closest("[data-dialog]");
       if (btn) {
-        const dlg = document.getElementById("dlg-" + btn.dataset.dialog), form = qs(dlg, "form");
+        const kind = btn.dataset.dialog, dlg = document.getElementById("dlg-" + kind), form = qs(dlg, "form");
         const p = btn.dataset.product ? JSON.parse(btn.dataset.product) : null;
         form.reset();
-        if (dlg.id === "dlg-product") {
-          form.action = p ? dlg.dataset.action.replace("/0/", `/${p.id}/`) : dlg.dataset.add;
+        if (dlg.dataset.action && p) form.action = dlg.dataset.action.replace("/0/", `/${p.id}/`);
+        if (kind === "product") {
+          form.action = p ? form.action : dlg.dataset.add;
           qs(dlg, "[data-title]").textContent = p ? `Edit ${p.short}` : "Add a product";
           qs(dlg, "[data-submit]").textContent = p ? "Save" : "Add product";
-          if (p) {
-            for (const name of ["name", "short", "category", "price", "discount", "stock", "badge", "description", "photos"]) form.elements[name].value = p[name] ?? "";
-            form.elements.is_active.checked = p.is_active;
-          }
+          const units = qs(dlg, "[data-units]");
+          units.hidden = !!p; units.querySelector("input").disabled = !!p;     // units change only with Refill, Sell, Return
+          if (p) for (const n of ["name", "short", "category", "price", "cost", "description"]) form.elements[n].value = p[n] ?? "";
+        } else if (kind === "return") {
+          form.action = dlg.dataset.add;
+          qs(dlg, "[data-refund]").hidden = true;
         } else {
-          form.action = dlg.dataset.action.replace("/0/", `/${p.id}/`);
-          qs(dlg, "[data-title]").textContent = `${dlg.id === "dlg-sell" ? "Sell" : "Refill"} ${p.short}`;
-          qs(dlg, "[data-stock-note]").textContent = `${p.sku} · ${p.stock} in stock`;
-          if (dlg.id === "dlg-sell") {
+          const titles = { sell: "Sell", refill: "Refill", media: "Photos & discount:" };
+          qs(dlg, "[data-title]").textContent = `${titles[kind]} ${p.short}`;
+          const note = qs(dlg, "[data-stock-note]");
+          if (note) note.textContent = `${p.sku} · ${p.stock} in stock`;
+          if (kind === "sell") {
             qs(dlg, "[data-price]").value = p.final;
             qs(dlg, "[data-qty]").max = Math.max(p.stock, 1);
-            dlg.oninput = () => { const t = Number(qs(dlg, "[data-qty]").value) * Number(qs(dlg, "[data-price]").value.replace(/[, ]/g, "")); qs(dlg, "[data-total]").textContent = t > 0 ? fmt(t) : "—"; };
-            dlg.oninput();
+            dlg.oninput = () => totalOf(dlg, "[data-price]");
           }
+          if (kind === "refill") { qs(dlg, "[data-cost]").value = p.cost !== "0" ? p.cost : ""; dlg.oninput = () => totalOf(dlg, "[data-cost]"); }
+          if (kind === "media") { form.elements.photos.value = p.photos; form.elements.discount.value = p.discount; form.elements.badge.value = p.badge; }
+          dlg.oninput && dlg.oninput();
         }
         dlg.showModal();
         return;
       }
       const dlg = e.target.closest("dialog");
       if (dlg && (e.target === dlg || e.target.closest("[data-close]"))) dlg.close();     // backdrop, ✕ or Cancel
+    });
+    // Return / loss: "money given back" only for a customer return
+    document.addEventListener("change", e => {
+      if (!e.target.matches("[data-kind]")) return;
+      const box = qs(document.getElementById("dlg-return"), "[data-refund]"), on = e.target.value === "return";
+      box.hidden = !on; box.querySelector("input").required = on;
     });
     // one click only: the button waits while the page saves
     document.addEventListener("submit", e => { const b = e.target.querySelector("[data-submit]"); if (b) { b.disabled = true; b.textContent = "Saving…"; } });

@@ -1,0 +1,130 @@
+{% extends "admin/base.html" %}
+{% block title %}Settings{% endblock %}
+{% block crumb %}Settings{% endblock %}
+{% set card = "rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900" %}
+{% set edit_btn = "inline-flex h-9 items-center gap-1.5 rounded-lg border border-zinc-200 px-3 text-sm font-medium transition hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-500" %}
+{% macro row(label, value, link=False) %}
+  <div class="flex items-baseline justify-between gap-4 border-t border-zinc-100 py-2.5 first:border-0 dark:border-zinc-800">
+    <dt class="shrink-0 text-sm text-zinc-500 dark:text-zinc-400">{{ label }}</dt>
+    <dd class="min-w-0 truncate text-right text-[15px] font-medium">
+      {%- if value and link %}<a href="{{ value }}" target="_blank" rel="noopener" class="text-brand hover:underline">{{ value|replace("https://", "")|replace("www.", "") }}</a>
+      {%- elif value %}{{ value }}
+      {%- else %}<span class="font-normal text-zinc-400 dark:text-zinc-500">Not set</span>{% endif -%}
+    </dd>
+  </div>
+{% endmacro %}
+{% macro head_card(ic, title, note, section) %}
+  <div class="mb-3 flex items-start justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <span class="grid size-10 place-items-center rounded-xl bg-brand/10 text-brand">{{ icon(ic, "size-5") }}</span>
+      <div><h2 class="text-[17px] font-semibold">{{ title }}</h2><p class="text-[13px] text-zinc-500 dark:text-zinc-400">{{ note }}</p></div>
+    </div>
+    <button type="button" data-dialog="{{ section }}" class="{{ edit_btn }}">{{ icon("pencil", "size-3.5") }} Edit</button>
+  </div>
+{% endmacro %}
+{% macro time_text(value) %}{{ value|replace("-", " – ") if value else "Closed" }}{% endmacro %}
+
+{% block content %}
+<div>
+  <h1 class="text-[28px] leading-tight">Settings</h1>
+  <p class="mt-1 text-[15px] text-zinc-500 dark:text-zinc-400">What the website shows customers. Changes appear on the site right away.</p>
+</div>
+
+<div class="mt-6 grid gap-4 lg:grid-cols-2">
+  <section class="{{ card }}">
+    {{ head_card("phone", "Contact", "How customers reach you", "contact") }}
+    <dl>{{ row("Phone", store.phone) }}{{ row("WhatsApp", ("+" ~ store.whatsapp) if store.whatsapp else "") }}{{ row("Email", store.email) }}</dl>
+  </section>
+
+  <section class="{{ card }}">
+    {{ head_card("map-pin", "Address", "Where the shop and studio are", "address") }}
+    <dl>{{ row("Address", store.address) }}{{ row("Google Maps", store.map_url, link=True) }}</dl>
+  </section>
+
+  <section class="{{ card }}">
+    {{ head_card("clock", "Working hours", "Opening and closing times", "hours") }}
+    <dl>{% for key, label in days %}{{ row(label, time_text(hours[key])) }}{% endfor %}</dl>
+  </section>
+
+  <section class="{{ card }}">
+    {{ head_card("share", "Social", "Links shown in the website footer", "social") }}
+    <dl>{{ row("Instagram", store.instagram, link=True) }}{{ row("Facebook", store.facebook, link=True) }}{{ row("TikTok", store.tiktok, link=True) }}</dl>
+  </section>
+</div>
+{% endblock %}
+
+{% block dialogs %}
+{% set dlg = "m-auto w-[min(540px,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-0 text-zinc-900 shadow-2xl backdrop:bg-black/55 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100" %}
+{% set lbl = "block text-sm font-medium text-zinc-700 dark:text-zinc-300" %}
+{% set fld = "field mt-1.5 rounded-lg py-2" %}
+{% set opt = '<span class="font-normal text-zinc-400">(optional)</span>'|safe %}
+{% macro dialog(section, title) %}
+<dialog id="dlg-{{ section }}" class="{{ dlg }}">
+  <form method="post" action="{{ url_for('admin.settings_save', section=section) }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="flex items-center justify-between gap-4 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+      <h2 class="text-lg">{{ title }}</h2>
+      <button type="button" data-close class="grid size-8 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10" aria-label="Close">{{ icon("x", "size-4") }}</button>
+    </div>
+    <div class="space-y-4 px-5 py-5">{{ caller() }}</div>
+    <div class="flex justify-end gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
+      <button type="button" data-close class="h-10 rounded-lg border border-zinc-200 px-4 text-[15px] font-medium hover:border-zinc-400 dark:border-zinc-700">Cancel</button>
+      <button class="h-10 rounded-lg bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark" data-submit>Save</button>
+    </div>
+  </form>
+</dialog>
+{% endmacro %}
+
+{% call dialog("contact", "Contact") %}
+  <div class="grid grid-cols-2 gap-3">
+    <label class="{{ lbl }}">Phone<input name="phone" required maxlength="40" value="{{ store.phone }}" class="{{ fld }}" placeholder="+250 788 123 456"></label>
+    <label class="{{ lbl }}">WhatsApp<input name="whatsapp" required inputmode="numeric" pattern="[0-9 +]{9,20}" value="{{ store.whatsapp }}" class="{{ fld }}" placeholder="250788123456"></label>
+  </div>
+  <label class="{{ lbl }}">Email<input name="email" type="email" required maxlength="120" value="{{ store.email }}" class="{{ fld }}" placeholder="hello@bestbuy250.rw"></label>
+  <p class="text-sm text-zinc-500 dark:text-zinc-400">WhatsApp: the number with its country code, no + or spaces needed.</p>
+{% endcall %}
+
+{% call dialog("address", "Address") %}
+  <label class="{{ lbl }}">Address<input name="address" required maxlength="200" value="{{ store.address }}" class="{{ fld }}" placeholder="KN 4 Ave, Kigali"></label>
+  <label class="{{ lbl }}">Google Maps link {{ opt }}<input name="map_url" type="url" maxlength="300" value="{{ store.map_url }}" class="{{ fld }}" placeholder="https://maps.app.goo.gl/…"></label>
+  <p class="text-sm text-zinc-500 dark:text-zinc-400">In Google Maps: find the shop → Share → Copy link.</p>
+{% endcall %}
+
+{% call dialog("hours", "Working hours") %}
+  {% for key, label in days %}
+    {% set v = hours[key] %}{% set parts = v.split("-") if v else ["08:00", "19:00"] %}
+    <fieldset class="grid grid-cols-[1fr_1fr_auto] items-end gap-3" data-day>
+      <legend class="mb-1.5 text-sm font-semibold">{{ label }}</legend>
+      <label class="{{ lbl }} font-normal">Opens<input type="time" name="{{ key }}_open" value="{{ parts[0] }}" required class="{{ fld }} disabled:opacity-35"{{ ' disabled' if not v }}></label>
+      <label class="{{ lbl }} font-normal">Closes<input type="time" name="{{ key }}_close" value="{{ parts[1] }}" required class="{{ fld }} disabled:opacity-35"{{ ' disabled' if not v }}></label>
+      <label class="flex h-[42px] cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 px-3 text-sm font-medium has-checked:border-brand has-checked:bg-brand/5 dark:border-zinc-700">
+        <input type="checkbox" name="{{ key }}_closed" value="1" class="size-4 accent-brand"{{ ' checked' if not v }} data-closed> Closed</label>
+    </fieldset>
+  {% endfor %}
+{% endcall %}
+
+{% call dialog("social", "Social") %}
+  {% for key, label, ph in [("instagram", "Instagram", "https://instagram.com/bestbuy250"), ("facebook", "Facebook", "https://facebook.com/bestbuy250"), ("tiktok", "TikTok", "https://tiktok.com/@bestbuy250")] %}
+    <label class="{{ lbl }}">{{ label }} {{ opt }}<input name="{{ key }}" type="url" maxlength="300" value="{{ store[key] }}" class="{{ fld }}" placeholder="{{ ph }}"></label>
+  {% endfor %}
+  <p class="text-sm text-zinc-500 dark:text-zinc-400">Empty links are hidden on the website; add them when the pages exist.</p>
+{% endcall %}
+
+<script>
+  (() => {
+    document.addEventListener("click", e => {
+      const btn = e.target.closest("[data-dialog]");
+      if (btn) { const d = document.getElementById("dlg-" + btn.dataset.dialog); d.querySelector("form").reset(); sync(); d.showModal(); return; }
+      const dlg = e.target.closest("dialog");
+      if (dlg && (e.target === dlg || e.target.closest("[data-close]"))) dlg.close();
+    });
+    // "Closed" turns that day's times off
+    const sync = () => document.querySelectorAll("[data-day]").forEach(f => {
+      const closed = f.querySelector("[data-closed]").checked;
+      f.querySelectorAll("input[type=time]").forEach(t => { t.disabled = closed; });
+    });
+    document.addEventListener("change", e => { if (e.target.matches("[data-closed]")) sync(); });
+    document.addEventListener("submit", e => { const b = e.target.querySelector("[data-submit]"); if (b) { b.disabled = true; b.textContent = "Saving…"; } });
+  })();
+</script>
+{% endblock %}
