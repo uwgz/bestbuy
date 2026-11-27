@@ -6,15 +6,20 @@
   <p class="mt-2 text-zinc-500">{{ items|length }} product{{ '' if items|length == 1 else 's' }}{% if q %} for “{{ q }}”{% endif %}</p>
 
   {# categories #}
-  <nav class="-mx-5 mt-6 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:px-0" aria-label="Categories">
+  {# one line only; ‹ › scroll it when the categories don't fit #}
+  <div data-scroller class="relative mt-6 flex items-center gap-2">
+  <button type="button" data-scroll-prev hidden class="grid size-10 shrink-0 place-items-center rounded-full border border-zinc-300 bg-white hover:border-zinc-900 dark:border-zinc-700 dark:bg-black dark:hover:border-zinc-300" aria-label="Scroll categories left">{{ icon("chevron-left", "size-4") }}</button>
+  <nav data-scroll-track class="flex min-w-0 flex-1 gap-2 overflow-x-auto scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Categories">
     {% set chip = "shrink-0 rounded-full border px-4 py-2 text-sm transition " %}
     {% set on = "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-zinc-900" %}
     {% set off = "border-zinc-300 hover:border-zinc-900 dark:border-zinc-700 dark:hover:border-zinc-300" %}
-    <a href="{{ url_for('shop', q=q or None, sort=sort if sort != 'featured' else None) }}" class="{{ chip }}{{ on if not cat else off }}">All</a>
+    <a href="{{ url_for('shop', q=q or None, sort=sort if sort != 'featured' else None) }}" class="{{ chip }}whitespace-nowrap {{ on if not cat else off }}">All</a>
     {% for key, (label, _i, _c) in categories.items() %}
-      <a href="{{ url_for('shop', category=key, q=q or None, sort=sort if sort != 'featured' else None) }}" class="{{ chip }}{{ on if cat == key else off }}">{{ label }} <span class="opacity-50">{{ counts[key] }}</span></a>
+      <a href="{{ url_for('shop', category=key, q=q or None, sort=sort if sort != 'featured' else None) }}" class="{{ chip }}whitespace-nowrap {{ on if cat == key else off }}"{{ ' data-active' if cat == key }}>{{ label }} <span class="opacity-50">{{ counts[key] }}</span></a>
     {% endfor %}
   </nav>
+  <button type="button" data-scroll-next hidden class="grid size-10 shrink-0 place-items-center rounded-full border border-zinc-300 bg-white hover:border-zinc-900 dark:border-zinc-700 dark:bg-black dark:hover:border-zinc-300" aria-label="Scroll categories right">{{ icon("chevron-right", "size-4") }}</button>
+  </div>
 
   {# search and sort #}
   <form method="get" class="mt-4 grid gap-3 sm:grid-cols-[1fr_220px]" role="search">

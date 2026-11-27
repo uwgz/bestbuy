@@ -106,6 +106,30 @@
     }));
   }
 
+  // ---------- one-line rows with ‹ › buttons (shop categories) ----------
+  $$("[data-scroller]").forEach(box => {
+    const track = $("[data-scroll-track]", box), prev = $("[data-scroll-prev]", box), next = $("[data-scroll-next]", box);
+    const update = () => {
+      const max = track.scrollWidth - track.clientWidth;
+      prev.hidden = track.scrollLeft <= 2;            // nothing more to the left
+      next.hidden = track.scrollLeft >= max - 2;      // nothing more to the right
+    };
+    const step = dir => track.scrollBy({ left: dir * track.clientWidth * 0.7, behavior: "smooth" });
+    prev.addEventListener("click", () => step(-1));
+    next.addEventListener("click", () => step(1));
+    track.addEventListener("scroll", update, { passive: true });
+    addEventListener("resize", update);
+    update();                                         // arrows first: they make the row narrower
+    const active = $("[data-active]", track);
+    if (active) {                                     // start with the chosen category in the middle of the row
+      const t = track.getBoundingClientRect(), a = active.getBoundingClientRect();
+      track.style.scrollBehavior = "auto";
+      track.scrollLeft += a.left - t.left - (t.width - a.width) / 2;
+      track.style.scrollBehavior = "";
+    }
+    update();
+  });
+
   // ---------- share and like ----------
   $$("[data-share]").forEach(btn => btn.addEventListener("click", async () => {
     const data = { title: btn.dataset.title, url: location.href.split("#")[0] };
