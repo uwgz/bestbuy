@@ -1,9 +1,9 @@
 [project]
 name = "best-buy-250"
 version = "2.0.0"
-description = "Best Buy 250: electronics shop and photography studio website (Flask pages, Tailwind CSS)"
+description = "Best Buy 250: electronics shop and photography studio website (Flask, Flask-SQLAlchemy, Tailwind CSS)"
 requires-python = ">=3.10"
-dependencies = ["Flask>=3.0,<4"]
+dependencies = ["Flask>=3.0,<4", "Flask-SQLAlchemy>=3.1,<4", "psycopg[binary]>=3.2,<4"]
 
 [tool.vercel]
 entrypoint = "app:app"

@@ -1,36 +1,57 @@
 # Best Buy 250
 
-A simple website for an electronics shop with a photography studio.
-Flask only serves the pages; there is **no login, no admin and no database**.
-The cart and "likes" are kept in each visitor's browser, and orders go to your WhatsApp.
+A website for an electronics shop with a photography studio.
+**Flask** serves the pages, **Flask-SQLAlchemy** keeps everything the site shows in a database
+(Neon PostgreSQL online, a small SQLite file on your computer), and **Tailwind CSS** styles it.
+There is no login or admin yet: that is the next step. Visitors' carts and likes stay in their browser;
+orders go to your WhatsApp.
 
-## Change what the site shows
-Everything is in **`data.py`**:
-- `STORE`: name, WhatsApp number, phone, email, address, opening hours, social links. Empty fields are hidden.
-- `PRODUCTS`: name (up to 20 words), short name (up to 4 words), category, price, discount %, label, units in stock, photos, description (`- ` lines become bullet points).
-- `SERVICES` and `PORTFOLIO`: the photography page.
-
-Save, then push to GitHub: Vercel publishes it in about a minute.
+## What is where
+| Folder / file | What it is |
+|---|---|
+| `bestbuy/models.py` | The database tables: Setting, Category, Product (+ ProductPhoto), Service, PortfolioItem, HeroSlide |
+| `bestbuy/pages.py` | The pages: home, shop, product, cart, photography, contact |
+| `bestbuy/seed.py` | The **starting content**, copied into an empty database once. After that the database is what counts |
+| `bestbuy/config.py` | Reads `DATABASE_URL` (Neon) |
+| `templates/` | The HTML pages (Tailwind classes) |
+| `public/static/` | CSS, JavaScript, logo files, photos |
 
 ## Run it on your computer
 ```
+python -m venv .venv
+.venv\Scripts\activate            (Windows)   or   source .venv/bin/activate   (Mac/Linux)
 pip install -r requirements.txt
 flask --app app run --debug
 ```
-Open http://127.0.0.1:5000
+Open http://127.0.0.1:5000. Without a `.env` file it uses `instance/bestbuy.db` (SQLite) and fills it
+with the starting content the first time.
 
-## Styles (Tailwind CSS)
-The pages use Tailwind classes. `public/static/css/app.css` is already built and committed,
-so the live site needs nothing else. Only if you **add new Tailwind classes** to a page, rebuild it:
+To use your Neon database instead, create a `.env` file next to `app.py` (see `.env.example`):
 ```
-npm install tailwindcss@4
-node tailwind/build.mjs
+DATABASE_URL=postgresql://USER:PASSWORD@ep-xxxx-pooler.REGION.aws.neon.tech/neondb?sslmode=require
 ```
+Careful: on your computer this then changes your **live** data.
+
+Commands:
+```
+flask --app app create-tables   # make missing tables (the site also does this when it starts)
+flask --app app load-demo       # put the starting content into empty tables
+```
+
+## Change what the site shows
+Until the admin pages exist: open your Neon project → **Tables**, and edit rows there
+(prices, stock, photos, store details in `settings`: `whatsapp`, `phone`, `address`, `hours`, `email`,
+`instagram`, `facebook`, `tiktok`, `currency`, `decimals`, `slide_seconds`). Set `is_active` to false to hide a row.
 
 ## Host on Vercel
-1. Push this folder to GitHub.
-2. In Vercel, import the repository (no settings or environment variables needed).
-3. Done. Old variables from the previous version (DATABASE_URL, SECRET_KEY, BLOB_…) are no longer used and can be deleted.
+1. Push to GitHub. Vercel builds it.
+2. Vercel → Settings → Environment Variables: `DATABASE_URL` = your Neon connection string
+   (or connect Neon in Vercel's Storage tab, which adds it for you). Redeploy.
+3. The first visit creates the tables and loads the starting content.
+
+## Styles (Tailwind CSS)
+`public/static/css/app.css` is already built. Only after adding new Tailwind classes:
+`npm install tailwindcss@4` then `node tailwind/build.mjs`.
 
 ## Tests
 ```

@@ -16,7 +16,7 @@ const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).forEach(e => {
   if (e.isDirectory()) walk(p); else if (/\.(html|js|svg|py)$/.test(e.name)) files.push(p);
 });
 walk(path.join(root, "templates")); walk(path.join(root, "public/static/js"));
-files.push(path.join(root, "icons.py"), path.join(root, "app.py"));
+walk(path.join(root, "bestbuy"));
 const candidates = new Set();
 for (const f of files) for (const t of fs.readFileSync(f, "utf8").split(/[\s"'`<>=]+/)) if (t) candidates.add(t);
 
