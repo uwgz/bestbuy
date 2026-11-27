@@ -36,6 +36,7 @@ Commands:
 ```
 flask --app app create-tables   # make missing tables (the site also does this when it starts)
 flask --app app load-demo       # put the starting content into empty tables
+flask --app app delete-old-site # delete the earlier site's tables (asks first; Neon only)
 ```
 
 ## Change what the site shows

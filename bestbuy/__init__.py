@@ -28,10 +28,40 @@ def create_app(overrides=None):
 
     with app.app_context():
         from . import models  # noqa: F401  (registers the tables)
+        _move_old_site_tables()
         db.create_all()                      # makes any missing tables; never changes existing ones
         if app.config.get("AUTO_LOAD_DEMO"):
             _load_demo_if_empty()
     return app
+
+
+# Tables of the earlier version of the site (the one with /altar). Same names, different columns.
+OLD_SITE_TABLES = ("giveaway_wins", "giveaways", "studio_gear", "messages", "bookings", "settings", "portfolio",
+                   "service_images", "services", "product_images", "sales", "products", "users",
+                   # made by a first start that then failed on the old tables (product_photos even points at the
+                   # old products table): set aside too, so they are made again properly
+                   "product_photos", "categories", "portfolio_items", "hero_slides")
+OLD_SCHEMA = "old_site"
+
+
+def _move_old_site_tables():
+    """A Neon database used by the earlier version still has its tables, and their names clash with the new ones.
+    Move them, untouched with all their data, into a separate schema called old_site. Runs once; nothing is deleted.
+    (Moving keeps their indexes and ID counters with them, so the new tables can use the plain names.)"""
+    if db.engine.dialect.name != "postgresql":
+        return
+    from sqlalchemy import text
+    with db.engine.begin() as conn:
+        conn.execute(text("SELECT pg_advisory_xact_lock(250250)"))      # one server at a time
+        old_layout = conn.execute(text(
+            "SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() "
+            "AND table_name = 'products' AND column_name = 'short_name'")).first()
+        if not old_layout:
+            return
+        conn.execute(text(f"CREATE SCHEMA IF NOT EXISTS {OLD_SCHEMA}"))
+        for name in OLD_SITE_TABLES:
+            conn.execute(text(f'ALTER TABLE IF EXISTS "{name}" SET SCHEMA {OLD_SCHEMA}'))
+    print(f"Moved the earlier site's tables into the '{OLD_SCHEMA}' schema (nothing deleted).")
 
 
 def _load_demo_if_empty():
