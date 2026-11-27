@@ -29,7 +29,7 @@
 
   // ---------- cart (slug -> quantity) ----------
   const getCart = () => read("cart", {});
-  const setCart = cart => { write("cart", cart); paintCount(); paintCards(); };
+  const setCart = cart => { write("cart", cart); paintCount(); paintCards(); paintProduct(); };
   const paintCount = () => {
     const n = Object.values(getCart()).reduce((a, b) => a + b, 0);
     $$("[data-cart-count]").forEach(el => { el.textContent = n > 99 ? "99+" : n; el.hidden = !n; });
@@ -67,22 +67,41 @@
   });
   paintCount();
   paintCards();
-  window.addEventListener("storage", e => { if (e.key === "cart") { paintCount(); paintCards(); } });   // another tab changed it
+  window.addEventListener("storage", e => { if (e.key === "cart") { paintCount(); paintCards(); paintProduct(); } });   // another tab changed it
 
-  // product page: quantity stepper and "Add to cart"
-  const qtyInput = $("[data-qty]");
-  $$("[data-step]").forEach(b => b.addEventListener("click", () => {
-    const max = Number(qtyInput.max || 99);
-    qtyInput.value = Math.min(max, Math.max(1, Number(qtyInput.value || 1) + Number(b.dataset.step)));
-  }));
-  $$("[data-add]").forEach(btn => btn.addEventListener("click", () => {
-    const slug = btn.dataset.add, stock = Number(btn.dataset.stock || 99);
-    const cart = getCart();
-    const want = (cart[slug] || 0) + Math.max(1, Number(qtyInput?.value || 1));
-    cart[slug] = Math.min(want, stock);
-    setCart(cart);
-    toast(want > stock ? `Only ${stock} in stock: ${stock} in your cart` : "Added to your cart");
-  }));
+  // product page: the quantity box and "Add to cart" follow the cart.
+  // Not in the cart yet: choose how many, then Add to cart.
+  // In the cart: the box changes the cart itself (the − is a bin at 1), the button opens the cart.
+  const addBtn = $("[data-add]"), qtyInput = $("[data-qty]");
+  function paintProduct() {
+    if (!addBtn || !qtyInput) return;
+    const slug = addBtn.dataset.add, inCart = getCart()[slug] || 0, note = $("[data-in-cart]");
+    if (inCart) qtyInput.value = inCart;
+    addBtn.textContent = inCart ? "Go to cart" : "Add to cart";
+    $("[data-step-minus]").hidden = inCart === 1;
+    $("[data-step-bin]").hidden = inCart !== 1;
+    if (note) { note.hidden = !inCart; $("span", note).textContent = `${inCart} in your cart`; }
+  }
+  if (addBtn && qtyInput) {
+    const slug = addBtn.dataset.add, stock = Number(addBtn.dataset.stock || 99);
+    const setQty = n => {                       // n = the wanted quantity
+      const cart = getCart();
+      if (!cart[slug]) { qtyInput.value = Math.min(stock, Math.max(1, n)); return; }   // not in the cart: just the box
+      if (n < 1) { delete cart[slug]; qtyInput.value = 1; toast("Removed from your cart"); }
+      else { if (n > stock) toast(`Only ${stock} in stock`); cart[slug] = Math.min(stock, n); }
+      setCart(cart);
+    };
+    $$("[data-step]").forEach(b => b.addEventListener("click", () => setQty(Number(qtyInput.value || 1) + Number(b.dataset.step))));
+    qtyInput.addEventListener("change", () => setQty(Math.max(1, Number(qtyInput.value) || 1)));
+    addBtn.addEventListener("click", () => {
+      const cart = getCart();
+      if (cart[slug]) { location.href = addBtn.dataset.cartUrl; return; }
+      cart[slug] = Math.min(stock, Math.max(1, Number(qtyInput.value || 1)));
+      setCart(cart);
+      toast("Added to your cart");
+    });
+    paintProduct();
+  }
 
   // cart page
   const cartBox = $("[data-cart]");
