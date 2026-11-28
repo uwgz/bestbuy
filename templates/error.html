@@ -1,0 +1,56 @@
+{# Every error (404, 500, …). Standalone on purpose: it must show even when the database is down. #}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }} | {{ store.name }}</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="{{ url_for('static', filename='favicon.svg') }}" type="image/svg+xml">
+  <script>try { var t = localStorage.getItem("theme"); if (t === "dark" || (!t && matchMedia("(prefers-color-scheme: dark)").matches)) document.documentElement.classList.add("dark"); } catch (e) {}</script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+</head>
+<body class="flex min-h-dvh flex-col bg-white text-zinc-900 antialiased dark:bg-black dark:text-zinc-100">
+  <header class="border-b border-zinc-200 dark:border-zinc-800">
+    <div class="wrap flex h-14 items-center justify-between">
+      <a href="{{ url_for('home') }}" class="flex items-center gap-2.5" aria-label="{{ store.name }} home">
+        <span class="block h-8 w-[30px] [&_svg]:size-full">{% include "partials/logo_anim.svg" %}</span>
+        <span class="font-display text-[17px] font-semibold">{{ store.name }}</span>
+      </a>
+      <button type="button" data-theme-toggle class="grid size-10 place-items-center rounded-full text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10" aria-label="Switch day / night">
+        <span class="dark:hidden">{{ icon("moon") }}</span><span class="hidden dark:inline">{{ icon("sun") }}</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="grid flex-1 place-items-center px-5 py-16">
+    <section class="max-w-lg text-center">
+      <p class="font-display text-[88px] font-bold leading-none tracking-tight text-zinc-200 sm:text-[120px] dark:text-zinc-800" aria-hidden="true">{{ code }}</p>
+      <h1 class="-mt-4 text-3xl sm:-mt-6 sm:text-4xl">{{ title }}</h1>
+      <p class="mt-3 text-[17px] leading-relaxed text-zinc-500 dark:text-zinc-400">{{ text }}</p>
+      <div class="mt-8 flex flex-wrap justify-center gap-3">
+        {% if in_admin %}
+          <a href="{{ url_for('admin.dashboard') }}" class="btn">Back to the admin</a>
+          <button type="button" onclick="history.length > 1 ? history.back() : location.assign('{{ url_for('admin.dashboard') }}')" class="btn-outline">Go back</button>
+        {% elif code == 404 %}
+          <a href="{{ url_for('home') }}" class="btn">Go home</a>
+          <a href="{{ url_for('shop') }}" class="btn-outline">Shop devices</a>
+        {% else %}
+          <button type="button" onclick="location.reload()" class="btn">{{ icon("refresh", "size-4") }} Try again</button>
+          <a href="{{ url_for('home') }}" class="btn-outline">Go home</a>
+        {% endif %}
+      </div>
+      {% if code >= 500 and store.whatsapp and not in_admin %}
+        <p class="mt-6 text-sm text-zinc-500">Need help now? <a class="font-medium text-wa hover:underline" href="https://wa.me/{{ store.whatsapp }}" target="_blank" rel="noopener">Message us on WhatsApp</a></p>
+      {% endif %}
+    </section>
+  </main>
+
+  <footer class="border-t border-zinc-200 py-5 text-center text-sm text-zinc-500 dark:border-zinc-800">© {{ store.name }}</footer>
+  <script>
+    document.querySelector("[data-theme-toggle]").addEventListener("click", () => {
+      const dark = document.documentElement.classList.toggle("dark");
+      try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch (e) {}
+    });
+  </script>
+</body>
+</html>

@@ -8,7 +8,7 @@ from sqlalchemy.exc import IntegrityError
 
 from .extensions import db
 from .icons import icon
-from .models import Category, GearItem, Giveaway, GiveawayCode, HeroSlide, PortfolioItem, Product, Service, Setting, new_code
+from .models import STORE_DEFAULTS, Category, GearItem, Giveaway, GiveawayCode, HeroSlide, PortfolioItem, Product, Service, Setting, new_code
 
 SORTS = {"featured": "Featured", "price-asc": "Price: low to high", "price-desc": "Price: high to low", "name": "Name"}
 FEATURED_BADGES = ("New", "Best seller", "Pro pick")
@@ -56,7 +56,11 @@ def _section(endpoint):
 # ---------------------------------------------------------------- giveaway draw
 def giveaway_on():
     """The giveaways running today, as "3,4" ("" = none). The page asks for a draw only when one is new to it."""
-    return ",".join(str(gw.id) for gw in Giveaway.live())
+    try:
+        return ",".join(str(gw.id) for gw in Giveaway.live())
+    except Exception:
+        db.session.rollback()
+        return ""
 
 
 def _visitor():
@@ -105,7 +109,12 @@ def init_app(app):
 
     @app.context_processor
     def _globals():
-        return {"store": Setting.store(), "categories": Category.as_dict(), "icon": icon, "money": money, "cad": cad,
+        try:
+            store, categories = Setting.store(), Category.as_dict()
+        except Exception:                      # database unreachable: pages (e.g. the error page) still show
+            db.session.rollback()
+            store, categories = dict(STORE_DEFAULTS), {}
+        return {"store": store, "categories": categories, "icon": icon, "money": money, "cad": cad,
                 "whatsapp_link": whatsapp_link, "nav_section": _section(request.endpoint), "giveaway_on": giveaway_on}
 
     @app.route("/giveaway/draw", methods=["POST"])
@@ -200,6 +209,49 @@ def init_app(app):
     def favicon():
         return app.send_static_file("favicon.svg")
 
-    @app.errorhandler(404)
-    def not_found(e):
-        return render_template("404.html"), 404
+    # ---------- error pages: one friendly page for every kind of error ----------
+    from werkzeug.exceptions import HTTPException
+
+    ERRORS = {
+        400: ("Something in that request wasn't right.", "Go back, refresh the page and try again."),
+        401: ("You need to sign in first.", "Sign in, then open the page again."),
+        403: ("You can't open this page.", "If you think you should, ask the shop's owner."),
+        404: ("This page isn't here.", "It may have moved, or the link has a typo."),
+        405: ("That doesn't work here.", "Go back and use the page's own buttons."),
+        413: ("That file is too big.", "Choose a smaller photo (4 MB at most) and try again."),
+        429: ("Too many tries.", "Wait a minute, then try again."),
+        500: ("Something went wrong on our side.", "It's not you. Try again in a moment, or message us on WhatsApp."),
+        502: ("We couldn't reach a service we need.", "Try again in a moment."),
+        503: ("We're back in a moment.", "The site is being updated. Try again in a minute."),
+    }
+
+    def error_page(code, detail=None):
+        title, text = ERRORS.get(code, ERRORS[500] if code >= 500 else ERRORS[400])
+        if detail and code == 400 and "Bad Request" not in detail and "browser (or proxy)" not in detail:
+            text = detail                           # our own words, e.g. "This form expired. …"
+        try:
+            return render_template("error.html", code=code, title=title, text=text,
+                                   in_admin=request.path.startswith("/admin")), code
+        except Exception:                           # even the page failed: plain words, nothing else needed
+            return (f"<!doctype html><meta charset=utf-8><title>{title}</title>"
+                    f"<body style='font:17px system-ui;text-align:center;padding:15vh 20px'><h1>{title}</h1>"
+                    f"<p>{text}</p><p><a href='/'>Go to the home page</a></p>"), code
+
+    @app.errorhandler(HTTPException)
+    def http_error(e):
+        if e.code and e.code < 400:                 # redirects and the like are not errors
+            return e
+        return error_page(e.code or 500, e.description)
+
+    @app.errorhandler(Exception)
+    def server_error(e):
+        if isinstance(e, HTTPException):
+            return http_error(e)
+        if app.debug or app.testing:                # on your computer and in tests: show the real error
+            raise e
+        try:
+            db.session.rollback()                   # leave the database ready for the next visitor
+        except Exception:
+            pass
+        app.logger.exception("Unexpected error on %s", request.path)   # shows in Vercel's logs
+        return error_page(500)

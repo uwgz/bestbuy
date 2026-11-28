@@ -119,3 +119,30 @@ def test_neon_address_uses_psycopg(monkeypatch):
 def test_footer_links_to_admin_sign_in(client):
     assert 'href="/admin/"' in client.get("/").get_data(as_text=True)
     assert "/admin/setup" in client.get("/admin/").headers["Location"]     # signed out: setup or sign-in page
+
+
+def test_error_pages_are_friendly(client, app):
+    page = client.get("/no-such-page")
+    assert page.status_code == 404 and "This page isn&#39;t here." in page.get_data(as_text=True)
+    page = client.put("/")                                                            # wrong kind of request
+    assert page.status_code == 405 and "That doesn&#39;t work here." in page.get_data(as_text=True)
+    page = client.post("/admin/login", data={"email": "x"})                           # form without its token
+    assert page.status_code == 400 and "This form expired" in page.get_data(as_text=True)
+    page = client.post("/giveaway/draw")
+    assert page.status_code == 400 and "wasn&#39;t right" in page.get_data(as_text=True)
+
+
+def test_server_error_page_works_without_the_database(app, monkeypatch):
+    """If something breaks (even the database), visitors get a clear page, not a crash."""
+    from bestbuy.models import Setting
+    def broken(*a, **k):
+        raise RuntimeError("database down")
+    monkeypatch.setattr(Setting, "store", classmethod(broken))
+    with app.test_request_context("/shop"):
+        handler = app.error_handler_spec[None][None][Exception]
+        app.testing = False
+        try:
+            body, code = handler(RuntimeError("boom"))
+        finally:
+            app.testing = True
+    assert code == 500 and "Something went wrong on our side." in body
