@@ -5,7 +5,8 @@ import pytest
 
 from bestbuy.extensions import db
 from bestbuy.admin import today
-from bestbuy.models import AuditLog, GearItem, Giveaway, GiveawayCode, Order, PortfolioItem, Product, Service, Setting, StockMove, User
+from bestbuy.models import (AuditLog, GearItem, Giveaway, GiveawayCode, Order, PortfolioItem, Product,
+                            SecurityQuestion, Service, Setting, StockMove, User)
 
 
 def _token(client, url="/admin/login"):
@@ -396,3 +397,156 @@ def test_blob_request_matches_vercel(monkeypatch):
     assert seen["method"] == "PUT" and seen["url"] == "https://vercel.com/api/blob/?pathname=products%2Fa.jpg"
     assert h["authorization"] == "Bearer vercel_blob_rw_sBY6aJKsF2Etw1FH_secret" and h["x-api-version"] == "13"
     assert h["x-vercel-blob-access"] == "public" and h["x-vercel-blob-store-id"] == "sBY6aJKsF2Etw1FH"
+
+
+# ---------------------------------------------------------------- employees and roles
+def sign_in(app, email, password):
+    c = app.test_client()
+    c.token = _token(c)
+    r = c.post("/admin/login", data={"csrf_token": c.token, "email": email, "password": password})
+    if r.status_code == 302:
+        c.token = _token(c, "/admin/account")
+    return c, r
+
+
+def add_person(owner, name, email, role, password="welcome123"):
+    return post(owner, "/admin/employees/add", name=name, email=email, role=role, password=password, confirm=password)
+
+
+def test_owner_adds_people_with_roles(owner):
+    add_person(owner, "Mary Manager", "mary@shop.rw", "manager")
+    add_person(owner, "Eric Employee", "eric@shop.rw", "employee")
+    add_person(owner, "Copy", "MARY@shop.rw", "employee")                                   # email already used
+    add_person(owner, "No role", "x@shop.rw", "boss")                                       # not a role
+    post(owner, "/admin/employees/add", name="Short", email="s@shop.rw", role="employee", password="123", confirm="123")
+    assert {u.email: u.role for u in User.query.all()} == {"owner@example.com": "owner", "mary@shop.rw": "manager", "eric@shop.rw": "employee"}
+    html = owner.get("/admin/employees").get_data(as_text=True)
+    assert "Mary Manager" in html and "Eric Employee" in html
+
+
+def test_what_each_role_may_open(owner, app):
+    add_person(owner, "Mary Manager", "mary@shop.rw", "manager")
+    add_person(owner, "Eric Employee", "eric@shop.rw", "employee")
+    eric, r = sign_in(app, "eric@shop.rw", "welcome123")
+    assert r.headers["Location"].endswith("/admin/stock")                                  # employees start in Stock
+    assert eric.get("/admin/").headers["Location"].endswith("/admin/stock")
+    for page in ("/admin/settings", "/admin/employees", "/admin/photography", "/admin/orders"):
+        assert eric.get(page).status_code == 302
+    assert eric.get("/admin/stock").status_code == 200 and eric.get("/admin/giveaways").status_code == 200
+    html = eric.get("/admin/stock").get_data(as_text=True)
+    assert 'data-dialog="sell"' in html and 'data-dialog="media"' not in html and 'data-dialog="product" class="btn' not in html
+    p = Product.query.filter_by(slug="canon-ef-50mm-f1-8-stm").one()
+    post(eric, f"/admin/stock/{p.id}/sell", qty="1", price="185000", day=today().isoformat(), customer="Aline")
+    assert db.session.get(Product, p.id).stock == 6                                          # may sell
+    post(eric, "/admin/stock/add", **PRODUCT)
+    assert not Product.query.filter_by(name=PRODUCT["name"]).first()                         # may not add products
+    mary, _ = sign_in(app, "mary@shop.rw", "welcome123")
+    assert mary.get("/admin/").status_code == 200 and mary.get("/admin/photography").status_code == 200
+    assert mary.get("/admin/settings").status_code == 302 and mary.get("/admin/employees").status_code == 302
+
+
+def test_always_one_owner_and_not_yourself(owner, app):
+    me = User.query.filter_by(email="owner@example.com").one()
+    post(owner, f"/admin/employees/{me.id}/access")                                            # can't remove yourself
+    post(owner, f"/admin/employees/{me.id}/edit", name="Patrick", email="owner@example.com", role="employee")
+    me = db.session.get(User, me.id)
+    assert me.is_active and me.role == "owner"
+    add_person(owner, "Eric Employee", "eric@shop.rw", "employee")
+    eric_id = User.query.filter_by(email="eric@shop.rw").one().id
+    eric, _ = sign_in(app, "eric@shop.rw", "welcome123")
+    post(owner, f"/admin/employees/{eric_id}/access")                                         # remove Eric's access
+    assert "/admin/login" in eric.get("/admin/stock").headers["Location"]                      # signed out at once
+    assert sign_in(app, "eric@shop.rw", "welcome123")[1].status_code == 200                    # and can't sign in
+
+
+def test_five_wrong_passwords_lock_the_account(owner, app):
+    post(owner, "/admin/logout")
+    for _ in range(5):
+        sign_in(app, "owner@example.com", "wrong password")
+    c, r = sign_in(app, "owner@example.com", "correct horse")
+    assert r.status_code == 200 and "Too many wrong tries" in r.get_data(as_text=True)
+    user = User.query.filter_by(email="owner@example.com").one()
+    user.locked_until = None; db.session.commit()
+    assert sign_in(app, "owner@example.com", "correct horse")[1].status_code == 302
+
+
+def test_signed_out_after_inactivity(owner, app):
+    import time
+    with owner.session_transaction() as s:
+        s["seen"] = time.time() - (app.config["ADMIN_IDLE_MINUTES"] * 60 + 125)        # past the limit and its 2-minute grace
+    r = owner.get("/admin/stock")
+    assert "/admin/login" in r.headers["Location"] and "idle=1" in r.headers["Location"]
+    assert "without activity" in owner.get(r.headers["Location"]).get_data(as_text=True)
+    assert owner.post("/admin/logout", data={"idle": "1"}).status_code == 302                  # the page's own sign-out still works
+
+
+def test_activity_keeps_you_signed_in(owner, app):
+    import time
+    with owner.session_transaction() as s:
+        s["seen"] = time.time() - (app.config["ADMIN_IDLE_MINUTES"] * 60 - 30)
+    assert post(owner, "/admin/ping").status_code == 204
+    assert owner.get("/admin/stock").status_code == 200
+
+
+# ---------------------------------------------------------------- security questions
+QUESTIONS = {f"q{i}": f"Question number {i}?" for i in range(1, 6)} | {f"a{i}": f"Answer {i}" for i in range(1, 6)}
+
+
+def test_security_questions_sign_you_in(owner, app):
+    post(owner, "/admin/account/questions", current="wrong", **QUESTIONS)                    # needs your password
+    assert SecurityQuestion.query.count() == 0
+    post(owner, "/admin/account/questions", current="correct horse", **{**QUESTIONS, "q2": "Question number 1?"})
+    assert SecurityQuestion.query.count() == 0                                                # five different ones
+    post(owner, "/admin/account/questions", current="correct horse", **QUESTIONS)
+    assert SecurityQuestion.query.count() == 5
+    post(owner, "/admin/logout")
+
+    c = app.test_client(); c.token = _token(c, "/admin/login/questions")
+    html = c.post("/admin/login/questions", data={"csrf_token": c.token, "email": "owner@example.com"}).get_data(as_text=True)
+    assert "Question number 3?" in html
+    qs = SecurityQuestion.query.order_by(SecurityQuestion.position).all()
+    answers = {f"a{q.id}": f"  ANSWER {i + 1}. " for i, q in enumerate(qs)}                  # capitals and spaces don't matter
+    wrong = {**answers, f"a{qs[4].id}": "nope"}
+    r = c.post("/admin/login/questions", data={"csrf_token": c.token, "email": "owner@example.com", "step": "answers", **wrong})
+    assert "answers are wrong" in r.get_data(as_text=True)
+    r = c.post("/admin/login/questions", data={"csrf_token": c.token, "email": "owner@example.com", "step": "answers", **answers})
+    assert r.status_code == 302 and "/admin/account" in r.headers["Location"]
+    c.token = _token(c, "/admin/account")
+    post(c, "/admin/account/password", password="brand new pass", confirm="brand new pass")  # no old password needed
+    assert User.query.filter_by(email="owner@example.com").one().check_password("brand new pass")
+
+
+def test_questions_need_to_be_set_and_lock_too(owner, app):
+    c = app.test_client(); c.token = _token(c, "/admin/login/questions")
+    html = c.post("/admin/login/questions", data={"csrf_token": c.token, "email": "owner@example.com"}).get_data(as_text=True)
+    assert "has no security questions" in html
+    post(owner, "/admin/account/questions", current="correct horse", **QUESTIONS)
+    qs = SecurityQuestion.query.all()
+    for _ in range(5):
+        c.post("/admin/login/questions", data={"csrf_token": c.token, "email": "owner@example.com", "step": "answers",
+                                               **{f"a{q.id}": "wrong" for q in qs}})
+    assert User.query.filter_by(email="owner@example.com").one().locked_until is not None
+
+
+def test_change_password_needs_the_current_one(owner):
+    post(owner, "/admin/account/password", current="wrong", password="another pass", confirm="another pass")
+    assert User.query.one().check_password("correct horse")
+    post(owner, "/admin/account/password", current="correct horse", password="another pass", confirm="another pass")
+    assert User.query.one().check_password("another pass")
+
+
+# ---------------------------------------------------------------- orders
+def test_orders_list_and_cancel(owner):
+    p = Product.query.filter_by(slug="canon-ef-50mm-f1-8-stm").one()                          # 7 in stock
+    sell(owner, p)                                                                            # 2 sold
+    html = owner.get("/admin/orders").get_data(as_text=True)
+    assert "Aline" in html and "Canon 50mm f/1.8" in html and "Cancel sale" in html
+    assert "Aline" in owner.get("/admin/orders?q=ali").get_data(as_text=True)
+    assert "No sales match" in owner.get("/admin/orders?q=nobody").get_data(as_text=True)
+    order = Order.query.one()
+    post(owner, f"/admin/orders/{order.id}/cancel")
+    assert db.session.get(Order, order.id).status == "cancelled" and db.session.get(Product, p.id).stock == 7
+    back = StockMove.query.filter_by(kind="return", order_id=order.id).one()
+    assert back.qty == 2 and back.amount == 370000
+    post(owner, f"/admin/orders/{order.id}/cancel")                                          # not twice
+    assert db.session.get(Product, p.id).stock == 7

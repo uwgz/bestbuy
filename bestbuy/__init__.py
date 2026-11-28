@@ -74,6 +74,9 @@ NEW_COLUMNS = [
     ("products", "cost", "NUMERIC(12, 2) NOT NULL DEFAULT 0"),
     ("order_items", "unit_cost", "NUMERIC(12, 2) NOT NULL DEFAULT 0"),
     ("products", "discount_until", "DATE"),
+    ("users", "role", "VARCHAR(10) NOT NULL DEFAULT 'owner'"),      # people already there are the owner
+    ("users", "failed_logins", "INTEGER NOT NULL DEFAULT 0"),
+    ("users", "locked_until", "TIMESTAMP WITH TIME ZONE"),
 ]
 
 

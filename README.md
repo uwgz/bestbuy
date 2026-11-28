@@ -9,13 +9,15 @@ Visitors' carts and likes stay in their browser; orders go to your WhatsApp.
 ## What is where
 | Folder / file | What it is |
 |---|---|
-| `bestbuy/models.py` | The database tables: Setting, Category, Product (+ ProductPhoto), Service, PortfolioItem, HeroSlide, User, Order (+ OrderItem), AuditLog |
-| `bestbuy/pages.py` | The pages: home, shop, product, cart, photography, contact |
-| `bestbuy/admin.py` | The admin (/admin): sign in; Stock: add, edit, sell, refill, hide / show |
+| `bestbuy/models.py` | The database tables: Setting, Category, Product (+ ProductPhoto), StockMove, Order (+ OrderItem), Service, PortfolioItem, GearItem, HeroSlide, Giveaway (+ GiveawayCode), User (+ SecurityQuestion), AuditLog |
+| `bestbuy/pages.py` | The website: home, shop, product, cart, photography, contact, the giveaway draw |
+| `bestbuy/admin.py` | The admin (/admin): signing in, roles, inactivity sign-out, shared helpers |
+| `bestbuy/admin_*.py` | One file per admin page: dashboard, stock, orders, photography, giveaways, employees, settings, account, upload |
+| `bestbuy/blob.py` | Uploads photos to Vercel Blob |
 | `bestbuy/seed.py` | The **starting content**, copied into an empty database once. After that the database is what counts |
-| `bestbuy/config.py` | Reads `DATABASE_URL` (Neon) |
-| `templates/` | The HTML pages (Tailwind classes) |
-| `public/static/` | CSS, JavaScript, logo files, photos |
+| `bestbuy/config.py` | Settings read from the environment (`DATABASE_URL`, `SECRET_KEY`, …) |
+| `templates/` | The HTML pages (Tailwind classes); `templates/admin/` for the admin |
+| `public/static/` | CSS, JavaScript, logo files |
 
 ## Run it on your computer
 ```
@@ -40,16 +42,35 @@ flask --app app load-demo       # put the starting content into empty tables
 flask --app app delete-old-site # delete the earlier site's tables (asks first; Neon only)
 ```
 
-## Change what the site shows
-Until the admin pages exist: open your Neon project → **Tables**, and edit rows there
-(prices, stock, photos, store details in `settings`: `whatsapp`, `phone`, `address`, `hours`, `email`,
-`instagram`, `facebook`, `tiktok`, `currency`, `decimals`, `slide_seconds`). Set `is_active` to false to hide a row.
+## The admin (/admin)
+The first visit creates the **owner**. The owner adds the other people in **Employees** and gives each a role:
+
+| Role | May use |
+|---|---|
+| Owner | Everything, including Employees and Settings |
+| Manager | Everything except Employees and Settings |
+| Employee | Stock (Sell, Refill, Return / loss) and Giveaways (check a code, give the prize) |
+
+Security:
+- **15 minutes without activity** signs you out (a minute before, a pop-up asks if you're still there).
+  Change it with the `ADMIN_IDLE_MINUTES` environment variable.
+- **Five wrong tries** in a row (password or security answers) lock the account for 15 minutes.
+  The owner can end a lock by setting a new password in Employees.
+- **Security questions:** everyone can set five questions and answers in **My account** (click your name).
+  "Forgot your password?" on the sign-in page then lets them sign in by answering all five, and choose a new password.
+  Answers are stored as hashes, like passwords; capitals and spaces don't matter.
+- Every action is written to the `audit_logs` table (who, what, when, from where).
+
+Photos are uploaded from the admin pop-ups to **Vercel Blob** (folders `products/`, `gear/`, `services/`,
+`portfolio/`). Vercel adds `BLOB_READ_WRITE_TOKEN` to the project when the Blob store is connected to it;
+to upload while running the site on your computer, put it in `.env` too.
 
 ## Host on Vercel
 1. Push to GitHub. Vercel builds it.
 2. Vercel → Settings → Environment Variables: `DATABASE_URL` = your Neon connection string
    (or connect Neon in Vercel's Storage tab, which adds it for you), and `SECRET_KEY` = a long random text
-   (`python -c "import secrets; print(secrets.token_hex(32))"`), type **Secret**. Redeploy.
+   (`python -c "import secrets; print(secrets.token_hex(32))"`), type **Secret**. Connect your Blob store to the
+   project (Storage → your store → Projects) so `BLOB_READ_WRITE_TOKEN` is there for photo uploads. Redeploy.
 3. The first visit creates the tables and loads the starting content.
 
 ## Styles (Tailwind CSS)

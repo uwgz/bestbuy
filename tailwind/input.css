@@ -33,3 +33,35 @@
 
 /* home slideshow: the active dot fills up while its photo is showing */
 @keyframes slide-fill { from { width: 0; } to { width: 100%; } }
+
+/* ---------- smooth motion everywhere ---------- */
+/* pop-ups (<dialog>): fade and rise in, fade out; the dark backdrop fades too */
+dialog {
+  opacity: 0; transform: translateY(10px) scale(.98);
+  transition: opacity .22s ease, transform .26s cubic-bezier(.2, .9, .3, 1.15), overlay .22s allow-discrete, display .22s allow-discrete;
+}
+dialog[open] { opacity: 1; transform: none; }
+@starting-style { dialog[open] { opacity: 0; transform: translateY(10px) scale(.98); } }
+dialog::backdrop { transition: opacity .22s ease, overlay .22s allow-discrete, display .22s allow-discrete; opacity: 0; }
+dialog[open]::backdrop { opacity: 1; }
+@starting-style { dialog[open]::backdrop { opacity: 0; } }
+
+/* small menus (bell, your name): drop down softly */
+@keyframes menu-in { from { opacity: 0; transform: translateY(-6px) scale(.98); } to { opacity: 1; transform: none; } }
+details[open] > .menu-pop { animation: menu-in .18s ease-out; transform-origin: top right; }
+
+/* messages after saving: slide in, fade out */
+@keyframes flash-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+.flash { animation: flash-in .3s ease-out; }
+.flash-out { opacity: 0; transform: translateY(-6px); transition: opacity .25s ease, transform .25s ease; }
+
+/* pages fade in instead of flashing */
+@keyframes page-in { from { opacity: 0; } to { opacity: 1; } }
+main { animation: page-in .25s ease-out; }
+
+/* buttons: a little press */
+button:not(:disabled):active, .btn:active { transform: scale(.98); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after, dialog, dialog::backdrop { animation: none !important; transition: none !important; }
+}

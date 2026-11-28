@@ -1,0 +1,110 @@
+{% extends "admin/base.html" %}
+{% block title %}My account{% endblock %}
+{% block crumb %}My account{% endblock %}
+{% set card = "rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900" %}
+{% set muted = "text-zinc-500 dark:text-zinc-400" %}
+{% set lbl = "block text-sm font-medium text-zinc-700 dark:text-zinc-300" %}
+{% set fld = "field mt-1.5 rounded-lg py-2" %}
+{% set btn = "inline-flex h-9 items-center gap-1.5 rounded-lg border border-zinc-200 px-3 text-sm font-medium transition hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-500" %}
+
+{% block content %}
+<div class="flex items-center gap-4">
+  <span class="grid size-14 place-items-center rounded-2xl bg-zinc-900 text-2xl font-bold text-white dark:bg-white dark:text-zinc-900">{{ user.name[0] }}</span>
+  <div>
+    <h1 class="text-[28px] leading-tight">{{ user.name }}</h1>
+    <p class="mt-0.5 text-[15px] {{ muted }}">{{ user.email }} · <b class="font-semibold text-brand">{{ user.role_label }}</b></p>
+  </div>
+</div>
+
+{% if reset %}
+  <p class="mt-6 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-[15px] text-amber-800 dark:text-amber-300">
+    {{ icon("key", "mt-0.5 size-5 shrink-0") }} You signed in with your security questions. Choose a new password now: your old one isn't needed.</p>
+{% endif %}
+
+<div class="mt-6 grid gap-4 lg:grid-cols-2">
+  <section id="password" class="{{ card }} scroll-mt-24">
+    <div class="mb-3 flex items-start justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <span class="grid size-10 place-items-center rounded-xl bg-brand/10 text-brand">{{ icon("lock", "size-5") }}</span>
+        <div><h2 class="text-[17px] font-semibold">Password</h2><p class="text-[13px] {{ muted }}">At least 8 characters</p></div>
+      </div>
+      <button type="button" data-dialog="password" class="{{ btn }}">{{ icon("pencil", "size-3.5") }} Change</button>
+    </div>
+    <p class="text-sm {{ muted }}">Last sign-in: {{ user.last_login_at.strftime("%b %d, %Y %H:%M") ~ " UTC" if user.last_login_at else "—" }}</p>
+  </section>
+
+  <section class="{{ card }}">
+    <div class="mb-3 flex items-start justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <span class="grid size-10 place-items-center rounded-xl bg-brand/10 text-brand">{{ icon("help", "size-5") }}</span>
+        <div><h2 class="text-[17px] font-semibold">Security questions</h2><p class="text-[13px] {{ muted }}">Sign in with them if you forget your password</p></div>
+      </div>
+      <button type="button" data-dialog="questions" class="{{ btn }}">{{ icon("pencil", "size-3.5") }} {{ "Change" if user.questions else "Set up" }}</button>
+    </div>
+    {% if user.questions %}
+      <ol class="space-y-1.5 text-sm">
+        {% for q in user.questions %}<li class="flex gap-2"><span class="tabular-nums text-zinc-400">{{ loop.index }}.</span><span>{{ q.question }}</span></li>{% endfor %}
+      </ol>
+      <p class="mt-3 flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">{{ icon("check", "size-4") }} Set. The answers are kept secret, like a password.</p>
+    {% else %}
+      <p class="flex items-start gap-2 rounded-xl bg-amber-500/10 px-3 py-2.5 text-sm text-amber-800 dark:text-amber-300">{{ icon("help", "mt-0.5 size-4 shrink-0") }} Not set yet. Set them up now, so you can still sign in if you forget your password.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
+
+{% block dialogs %}
+{% set dlg = "m-auto w-[min(560px,calc(100vw-2rem))] max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-0 text-zinc-900 shadow-2xl backdrop:bg-black/55 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100" %}
+{% macro dialog(name, title, action, label) %}
+<dialog id="dlg-{{ name }}" class="{{ dlg }}">
+  <form method="post" action="{{ action }}" autocomplete="off">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="flex items-center justify-between gap-4 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+      <h2 class="text-lg">{{ title }}</h2>
+      <button type="button" data-close class="grid size-8 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-100 dark:hover:bg-white/10" aria-label="Close">{{ icon("x", "size-4") }}</button>
+    </div>
+    <div class="space-y-4 px-5 py-5">{{ caller() }}</div>
+    <div class="flex justify-end gap-2 border-t border-zinc-200 px-5 py-4 dark:border-zinc-800">
+      <button type="button" data-close class="h-10 rounded-lg border border-zinc-200 px-4 text-[15px] font-medium hover:border-zinc-400 dark:border-zinc-700">Cancel</button>
+      <button class="h-10 rounded-lg bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark" data-submit>{{ label }}</button>
+    </div>
+  </form>
+</dialog>
+{% endmacro %}
+
+{% call dialog("password", "Change password", url_for('admin.account_password'), "Save password") %}
+  {% if not reset %}<label class="{{ lbl }}">Current password<input name="current" type="password" required autocomplete="current-password" class="{{ fld }}"></label>{% endif %}
+  <div class="grid grid-cols-2 gap-3">
+    <label class="{{ lbl }}">New password<input name="password" type="password" required minlength="8" autocomplete="new-password" class="{{ fld }}"></label>
+    <label class="{{ lbl }}">Type it again<input name="confirm" type="password" required minlength="8" autocomplete="new-password" class="{{ fld }}"></label>
+  </div>
+{% endcall %}
+
+{% call dialog("questions", "Security questions", url_for('admin.account_questions'), "Save questions") %}
+  <p class="-mt-1 text-sm {{ muted }}">Pick a question from the list or write your own. Choose answers you'll always remember and others can't guess. Capitals and spaces don't matter.</p>
+  {% for i in range(1, count + 1) %}
+    {% set q = user.questions[i - 1].question if user.questions|length >= i else "" %}
+    <div class="grid grid-cols-[1fr_180px] gap-3">
+      <label class="{{ lbl }}"><span class="sr-only">Question {{ i }}</span>
+        <input name="q{{ i }}" required maxlength="200" list="question-ideas" value="{{ q }}" class="field rounded-lg py-2" placeholder="Question {{ i }}"></label>
+      <label class="{{ lbl }}"><span class="sr-only">Answer {{ i }}</span>
+        <input name="a{{ i }}" required maxlength="120" class="field rounded-lg py-2" placeholder="Answer" spellcheck="false" autocapitalize="off"></label>
+    </div>
+  {% endfor %}
+  <datalist id="question-ideas">{% for s in suggestions %}<option value="{{ s }}">{% endfor %}</datalist>
+  {% if not reset %}<label class="{{ lbl }}">Your password, to confirm it's you<input name="current" type="password" required autocomplete="current-password" class="{{ fld }}"></label>{% endif %}
+{% endcall %}
+
+<script>
+  (() => {
+    document.addEventListener("click", e => {
+      const btn = e.target.closest("[data-dialog]");
+      if (btn) { const d = document.getElementById("dlg-" + btn.dataset.dialog); d.querySelector("form").reset(); d.showModal(); return; }
+      const dlg = e.target.closest("dialog");
+      if (dlg && (e.target === dlg || e.target.closest("[data-close]"))) dlg.close();
+    });
+    document.addEventListener("submit", e => { const b = e.target.querySelector("[data-submit]"); if (b) { b.disabled = true; b.textContent = "Saving…"; } });
+    if (location.hash === "#password" && {{ "true" if reset else "false" }}) document.getElementById("dlg-password").showModal();
+  })();
+</script>
+{% endblock %}

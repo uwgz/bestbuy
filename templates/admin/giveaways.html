@@ -17,7 +17,7 @@
   </div>
   <div class="flex gap-2">
     <button type="button" data-dialog="check" class="inline-flex h-11 items-center gap-2 rounded-xl border border-zinc-300 px-4 text-[15px] font-medium hover:border-zinc-500 dark:border-zinc-700 dark:hover:border-zinc-500">{{ icon("search", "size-4") }} Check a code</button>
-    <button type="button" data-dialog="new" class="btn h-11 rounded-xl px-4">{{ icon("plus", "size-4") }} New giveaway</button>
+    {% if can("admin.giveaway_new") %}<button type="button" data-dialog="new" class="btn h-11 rounded-xl px-4">{{ icon("plus", "size-4") }} New giveaway</button>{% endif %}
   </div>
 </div>
 
@@ -82,7 +82,7 @@
             <div class="h-full rounded-full bg-brand" style="width: {{ (gw.given / gw.winners * 100)|round }}%"></div>
           </div>
         </div>
-        {% if gw.status in ("live", "upcoming", "full", "stopped") %}
+        {% if gw.status in ("live", "upcoming", "full", "stopped") and can("admin.giveaway_stop") %}
           <form method="post" action="{{ url_for('admin.giveaway_stop', giveaway_id=gw.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="h-9 rounded-lg border border-zinc-200 px-3 text-sm font-medium hover:border-zinc-400 dark:border-zinc-700 dark:hover:border-zinc-500">{{ "Resume" if gw.status == "stopped" else "Stop" }}</button>

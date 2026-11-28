@@ -1,0 +1,24 @@
+{% extends "admin/_auth.html" %}
+{% block title %}Sign in with your questions{% endblock %}
+{% block card %}
+<h1 class="text-xl">Forgot your password?</h1>
+<p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+  {%- if user %}Answer your five security questions. All five must be right.{% else %}Sign in by answering the five security questions you set in My account.{% endif %}</p>
+{% if error %}<p class="mt-4 rounded-lg bg-sale/10 px-3 py-2 text-sm text-sale" role="alert">{{ error }}</p>{% endif %}
+<form method="post" class="mt-5 space-y-4" autocomplete="off">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  {% if user %}
+    <input type="hidden" name="email" value="{{ user.email }}"><input type="hidden" name="step" value="answers">
+    <p class="flex items-center gap-2 rounded-lg bg-zinc-100 px-3 py-2 text-sm dark:bg-white/5">{{ icon("user", "size-4 text-zinc-400") }}{{ user.email }}</p>
+    {% for q in user.questions %}
+      <label class="block text-sm font-medium">{{ loop.index }}. {{ q.question }}
+        <input name="a{{ q.id }}" required class="field mt-1.5 rounded-lg py-2" {{ "autofocus" if loop.first }} spellcheck="false" autocapitalize="off"></label>
+    {% endfor %}
+    <button class="h-11 w-full rounded-lg bg-brand text-[15px] font-semibold text-white hover:bg-brand-dark">Sign in</button>
+  {% else %}
+    <label class="block text-sm font-medium">Your email<input name="email" type="email" required autofocus autocomplete="username" class="field mt-1.5 rounded-lg py-2" value="{{ email }}"></label>
+    <button class="h-11 w-full rounded-lg bg-brand text-[15px] font-semibold text-white hover:bg-brand-dark">Show my questions</button>
+  {% endif %}
+</form>
+<p class="mt-4 text-center text-sm"><a href="{{ url_for('admin.login') }}" class="text-brand hover:underline">Sign in with your password</a></p>
+{% endblock %}

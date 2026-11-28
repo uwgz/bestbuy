@@ -4,6 +4,7 @@
 <h1 class="text-xl">Sign in</h1>
 <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">To manage your shop.</p>
 {% if key_missing %}<p class="mt-4 rounded-lg bg-amber-500/12 px-3 py-2 text-sm text-amber-700 dark:text-amber-400">SECRET_KEY isn't set on Vercel, so you'll be signed out often. Add it in Settings → Environment Variables.</p>{% endif %}
+{% if idle and not error %}<p class="mt-4 flex items-start gap-2 rounded-lg bg-amber-500/12 px-3 py-2 text-sm text-amber-700 dark:text-amber-400" role="status">{{ icon("lock", "mt-0.5 size-4 shrink-0") }} You were signed out after {{ idle_minutes }} minutes without activity, to keep the shop safe. Sign in again.</p>{% endif %}
 {% if error %}<p class="mt-4 rounded-lg bg-sale/10 px-3 py-2 text-sm text-sale" role="alert">{{ error }}</p>{% endif %}
 <form method="post" class="mt-5 space-y-4">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -11,4 +12,5 @@
   <label class="block text-sm font-medium">Password<input name="password" type="password" required autocomplete="current-password" class="field mt-1.5 rounded-lg py-2"></label>
   <button class="h-11 w-full rounded-lg bg-brand text-[15px] font-semibold text-white hover:bg-brand-dark">Sign in</button>
 </form>
+<p class="mt-4 text-center text-sm"><a href="{{ url_for('admin.login_questions') }}" class="text-brand hover:underline">Forgot your password?</a></p>
 {% endblock %}

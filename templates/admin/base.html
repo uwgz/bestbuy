@@ -17,20 +17,23 @@
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 </head>
-{% set nav = [
-  ("admin.dashboard", "Dashboard", "layout", 0),
-  ("admin.stock", "Stock", "package", low_stock),
-  ("admin.photography", "Photography", "camera", 0),
-  ("admin.orders", "Orders", "receipt", new_orders),
-  ("admin.giveaways", "Giveaways", "gift", 0),
-  ("admin.settings", "Settings", "settings", 0),
+{# the menu: only the pages this person's role may open (admin.can) #}
+{% set all_nav = [
+  ("admin.dashboard", "Dashboard", "layout", 0, 1),
+  ("admin.stock", "Stock", "package", low_stock, 1),
+  ("admin.photography", "Photography", "camera", 0, 1),
+  ("admin.orders", "Orders", "receipt", new_orders, 1),
+  ("admin.giveaways", "Giveaways", "gift", 0, 2),
+  ("admin.employees", "Employees", "users", 0, 2),
+  ("admin.settings", "Settings", "settings", 0, 2),
 ] %}
-<body class="min-h-dvh bg-zinc-100 text-zinc-900 antialiased dark:bg-[#0e0e10] dark:text-zinc-100">
+{% set nav = [] %}{% for item in all_nav %}{% if can(item[0]) %}{% set _ = nav.append(item) %}{% endif %}{% endfor %}
+<body class="min-h-dvh bg-zinc-100 text-zinc-900 antialiased dark:bg-[#0e0e10] dark:text-zinc-100" data-idle-minutes="{{ idle_minutes }}" data-ping="{{ url_for('admin.ping') }}">
 
   {# ---------------- top bar ---------------- #}
   <header class="sticky top-0 z-40 flex h-16 items-center gap-3 border-b-2 border-brand bg-white px-4 text-zinc-900 sm:px-5 dark:bg-[#0b0b0c] dark:text-white">
     <button type="button" data-drawer-open class="-ml-1 grid size-10 place-items-center rounded-lg hover:bg-zinc-100 lg:hidden dark:hover:bg-white/10" aria-label="Open menu">{{ icon("menu") }}</button>
-    <a href="{{ url_for('admin.dashboard') }}" class="flex min-w-0 items-center gap-3">
+    <a href="{{ url_for('admin.dashboard') if can('admin.dashboard') else url_for('admin.stock') }}" class="flex min-w-0 items-center gap-3">
       <span class="grid size-10 shrink-0 place-items-center rounded-xl bg-zinc-900 p-1.5 text-white [&_svg]:size-full dark:bg-white dark:text-zinc-900">{% include "partials/logo_anim.svg" %}</span>
       <span class="hidden h-6 w-px bg-zinc-200 sm:block dark:bg-white/15"></span>
       <span class="truncate font-display text-[17px] font-semibold">{{ store.name }}</span>
@@ -41,18 +44,34 @@
       <button type="button" data-theme-toggle class="grid size-10 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-white/80 dark:hover:bg-white/10 dark:hover:text-white" aria-label="Switch day / night">
         <span class="dark:hidden">{{ icon("moon") }}</span><span class="hidden dark:inline">{{ icon("sun") }}</span>
       </button>
-      <a href="{{ url_for('admin.orders') }}" class="relative grid size-10 place-items-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-white/80 dark:hover:bg-white/10 dark:hover:text-white" aria-label="New orders: {{ new_orders }}">
-        {{ icon("bell") }}
-        {% if new_orders %}<span class="absolute right-1 top-1 grid min-w-[18px] place-items-center rounded-full bg-sale px-1 text-[11px] font-bold leading-[18px] ring-2 ring-white dark:ring-[#0b0b0c]">{{ new_orders }}</span>{% endif %}
-      </a>
-      <details class="relative ml-1 [&_summary::-webkit-details-marker]:hidden">
+      {# alerts: products running low and giveaway prizes waiting to be collected #}
+      {% set alerts = (low_stock if can("admin.stock") else 0) + (codes_waiting if can("admin.giveaways") else 0) %}
+      <details class="relative [&_summary::-webkit-details-marker]:hidden" data-menu>
+        <summary class="relative grid size-10 cursor-pointer list-none place-items-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-white/80 dark:hover:bg-white/10 dark:hover:text-white" aria-label="Alerts: {{ alerts }}">
+          {{ icon("bell") }}
+          {% if alerts %}<span class="absolute right-1 top-1 grid min-w-[18px] place-items-center rounded-full bg-sale px-1 text-[11px] font-bold leading-[18px] text-white ring-2 ring-white dark:ring-[#0b0b0c]">{{ alerts }}</span>{% endif %}
+        </summary>
+        <div class="menu-pop absolute right-0 mt-2 w-72 overflow-hidden rounded-xl border border-zinc-200 bg-white py-1.5 text-[15px] text-zinc-800 shadow-xl dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+          <p class="px-4 pb-1.5 pt-1 text-xs font-semibold uppercase tracking-wider text-zinc-400">Alerts</p>
+          {% if low_stock and can("admin.stock") %}
+            <a href="{{ url_for('admin.stock') }}" class="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-white/5"><span class="grid size-8 place-items-center rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400">{{ icon("package", "size-4") }}</span><span><b>{{ low_stock }}</b> product{{ "s" if low_stock != 1 }} running low</span></a>
+          {% endif %}
+          {% if codes_waiting and can("admin.giveaways") %}
+            <a href="{{ url_for('admin.giveaways') }}" class="flex items-center gap-3 px-4 py-2.5 hover:bg-zinc-100 dark:hover:bg-white/5"><span class="grid size-8 place-items-center rounded-lg bg-violet-500/12 text-violet-600 dark:text-violet-400">{{ icon("gift", "size-4") }}</span><span><b>{{ codes_waiting }}</b> giveaway prize{{ "s" if codes_waiting != 1 }} to collect</span></a>
+          {% endif %}
+          {% if not alerts %}<p class="flex items-center gap-2 px-4 py-2.5 text-zinc-500 dark:text-zinc-400">{{ icon("check", "size-4 text-emerald-600") }} Nothing needs you right now.</p>{% endif %}
+        </div>
+      </details>
+      <details class="relative ml-1 [&_summary::-webkit-details-marker]:hidden" data-menu>
         <summary class="flex cursor-pointer list-none items-center gap-2.5 rounded-full py-1 pl-1 pr-2 hover:bg-zinc-100 sm:pr-3 dark:hover:bg-white/10">
           <span class="grid size-8 place-items-center rounded-full bg-zinc-900 text-sm font-bold text-white dark:bg-white dark:text-zinc-900">{{ admin_user[0] }}</span>
           <span class="hidden text-[15px] font-semibold sm:inline">{{ admin_user }}</span>
           {{ icon("chevron-down", "hidden size-4 text-zinc-400 sm:block dark:text-white/60") }}
         </summary>
-        <div class="absolute right-0 mt-2 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white py-1.5 text-[15px] text-zinc-800 shadow-xl dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
-          <p class="truncate px-4 pb-2 pt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ g.user.email }}</p>
+        <div class="menu-pop absolute right-0 mt-2 w-60 overflow-hidden rounded-xl border border-zinc-200 bg-white py-1.5 text-[15px] text-zinc-800 shadow-xl dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+          <p class="truncate px-4 pt-1 text-xs text-zinc-500 dark:text-zinc-400">{{ g.user.email }}</p>
+          <p class="px-4 pb-2 text-xs font-semibold text-brand">{{ admin_role }}</p>
+          <a href="{{ url_for('admin.account') }}" class="flex items-center gap-2.5 px-4 py-2 hover:bg-zinc-100 dark:hover:bg-white/5">{{ icon("user", "size-4") }} My account</a>
           <a href="{{ url_for('home') }}" target="_blank" rel="noopener" class="flex items-center gap-2.5 px-4 py-2 hover:bg-zinc-100 dark:hover:bg-white/5">{{ icon("external", "size-4") }} Open the website</a>
           <form method="post" action="{{ url_for('admin.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button class="flex w-full items-center gap-2.5 px-4 py-2 text-left text-sale hover:bg-zinc-100 dark:hover:bg-white/5">{{ icon("logout", "size-4") }} Log out</button>
@@ -74,9 +93,9 @@
         <button type="button" data-drawer-close class="grid size-10 place-items-center rounded-lg hover:bg-zinc-200 dark:hover:bg-white/10" aria-label="Close menu">{{ icon("x") }}</button>
       </div>
       <nav class="space-y-1" aria-label="Admin">
-        {% for endpoint, label, ic, badge in nav %}
+        {% for endpoint, label, ic, badge, group in nav %}
           {% set on = request.endpoint == endpoint %}
-          {% if loop.index == 5 %}<div class="mx-3 my-3 h-px bg-zinc-200 dark:bg-zinc-800"></div>{% endif %}
+          {% if not loop.first and group != loop.previtem[4] %}<div class="mx-3 my-3 h-px bg-zinc-200 dark:bg-zinc-800"></div>{% endif %}
           <a href="{{ url_for(endpoint) }}" title="{{ label }}"{{ ' aria-current="page"' if on }}
              class="group relative flex h-12 items-center gap-3.5 rounded-xl px-3.5 text-[16px] transition
                     {{ 'bg-white font-semibold shadow-sm dark:bg-white/[.08]' if on else 'text-zinc-700 hover:bg-zinc-200/70 dark:text-zinc-300 dark:hover:bg-white/5' }}">
@@ -94,7 +113,7 @@
       <div class="flex h-14 items-center gap-3 px-4 sm:px-6">
         <button type="button" data-rail-toggle class="hidden size-9 place-items-center rounded-lg text-zinc-600 hover:bg-zinc-200 lg:grid dark:text-zinc-300 dark:hover:bg-white/10" aria-label="Fold the menu">{{ icon("menu") }}</button>
         <p class="min-w-0 truncate text-[15px] text-zinc-500 dark:text-zinc-400">
-          <a href="{{ url_for('admin.dashboard') }}" class="hover:text-zinc-900 dark:hover:text-white">{{ store.name }}</a>
+          <a href="{{ url_for('admin.dashboard') if can('admin.dashboard') else url_for('admin.stock') }}" class="hover:text-zinc-900 dark:hover:text-white">{{ store.name }}</a>
           <span class="mx-1.5">›</span><span class="font-semibold text-zinc-900 dark:text-white">{% block crumb %}{% endblock %}</span>
           {% block crumb_note %}{% endblock %}
         </p>
@@ -102,9 +121,9 @@
       </div>
       <div class="min-h-[calc(100dvh-7.5rem)] rounded-tl-3xl border-l border-t border-zinc-200 bg-white px-4 py-6 sm:px-8 sm:py-8 lg:rounded-tl-3xl dark:border-zinc-800 dark:bg-[#18181b]">
         {% with messages = get_flashed_messages(with_categories=true) %}{% for kind, text in messages %}
-          <div data-flash class="mb-5 flex items-start gap-3 rounded-xl border px-4 py-3 text-[15px] {{ 'border-sale/30 bg-sale/8 text-sale' if kind == 'error' else 'border-emerald-500/30 bg-emerald-500/8 text-emerald-700 dark:text-emerald-400' }}" role="{{ 'alert' if kind == 'error' else 'status' }}">
+          <div data-flash="{{ kind }}" class="flash mb-5 flex items-start gap-3 rounded-xl border px-4 py-3 text-[15px] {{ 'border-sale/30 bg-sale/8 text-sale' if kind == 'error' else 'border-emerald-500/30 bg-emerald-500/8 text-emerald-700 dark:text-emerald-400' }}" role="{{ 'alert' if kind == 'error' else 'status' }}">
             {{ icon("x" if kind == 'error' else "check", "mt-0.5 size-4") }}<span class="flex-1">{{ text }}</span>
-            <button type="button" onclick="this.parentElement.remove()" class="opacity-60 hover:opacity-100" aria-label="Close">{{ icon("x", "size-4") }}</button>
+            <button type="button" data-flash-close class="opacity-60 hover:opacity-100" aria-label="Close">{{ icon("x", "size-4") }}</button>
           </div>
         {% endfor %}{% endwith %}
         {% block content %}{% endblock %}
@@ -113,6 +132,21 @@
   </div>
 
   {% block dialogs %}{% endblock %}
+
+  {# a minute before being signed out for inactivity #}
+  <dialog id="dlg-idle" class="m-auto w-[min(400px,calc(100vw-2rem))] rounded-2xl border border-zinc-200 bg-white p-0 text-center text-zinc-900 shadow-2xl backdrop:bg-black/55 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+    <div class="px-6 pb-2 pt-7">
+      <span class="mx-auto grid size-12 place-items-center rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400">{{ icon("lock", "size-6") }}</span>
+      <h2 class="mt-3 text-lg">Still there?</h2>
+      <p class="mt-1 text-[15px] text-zinc-500 dark:text-zinc-400">For security, you'll be signed out in <b data-idle-left class="tabular-nums text-zinc-900 dark:text-white">60</b> seconds.</p>
+    </div>
+    <form method="post" action="{{ url_for('admin.logout') }}" class="flex justify-center gap-2 px-6 pb-6 pt-4" data-idle-form>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="idle" value="1">
+      <button class="h-10 rounded-lg border border-zinc-200 px-4 text-[15px] font-medium hover:border-zinc-400 dark:border-zinc-700">Sign out</button>
+      <button type="button" data-idle-stay class="h-10 rounded-lg bg-brand px-5 text-[15px] font-semibold text-white hover:bg-brand-dark">Stay signed in</button>
+    </form>
+  </dialog>
+
   <script src="{{ url_for('static', filename='js/admin-photos.js') }}" defer></script>
   <script>
     (() => {
@@ -136,6 +170,51 @@
       $("[data-drawer-close]")?.addEventListener("click", () => setDrawer(false));
       backdrop.addEventListener("click", () => setDrawer(false));
       addEventListener("keydown", e => e.key === "Escape" && setDrawer(false));
+
+      // menus (bell, you): one open at a time; a click elsewhere closes them
+      document.addEventListener("click", e => {
+        document.querySelectorAll("[data-menu][open]").forEach(m => { if (!m.contains(e.target)) m.open = false; });
+      });
+
+      // messages: slide in; "saved" ones fade away after a few seconds
+      document.querySelectorAll("[data-flash]").forEach(f => {
+        const close = () => { f.classList.add("flash-out"); setTimeout(() => f.remove(), 260); };
+        f.querySelector("[data-flash-close]").addEventListener("click", close);
+        if (f.dataset.flash !== "error") setTimeout(close, 6000);
+      });
+
+      // sign out after some minutes without activity: activity = mouse, keys, touch, scrolling
+      const idleMs = Number(document.body.dataset.idleMinutes || 15) * 60000, warnMs = 60000;
+      const idleDlg = $("#dlg-idle"), left = $("[data-idle-left]");
+      let lastActive = Date.now(), lastPing = Date.now(), countdown;
+      const ping = () => {
+        lastPing = Date.now();
+        const data = new FormData(); data.append("csrf_token", idleDlg.querySelector("[name=csrf_token]").value);
+        fetch(document.body.dataset.ping, { method: "POST", body: data, credentials: "same-origin" })
+          .then(r => { if (r.status === 401 || r.status === 400) location.href = idleDlg.querySelector("form").action.replace("logout", "login") + "?idle=1"; })
+          .catch(() => {});                                 // no connection: try again with the next activity
+      };
+      const active = () => {
+        if (idleDlg.open) return;                           // the warning is up: only its buttons count
+        lastActive = Date.now();
+        if (Date.now() - lastPing > 2 * 60000) ping();      // tell the server, at most every 2 minutes
+      };
+      ["pointerdown", "keydown", "scroll", "touchstart", "mousemove"].forEach(ev => addEventListener(ev, active, { passive: true }));
+      $("[data-idle-stay]").addEventListener("click", () => { clearInterval(countdown); idleDlg.close(); lastActive = Date.now(); ping(); });
+      setInterval(() => {
+        const quiet = Date.now() - lastActive;
+        if (quiet >= idleMs - warnMs && !idleDlg.open) {
+          document.querySelectorAll("dialog[open]").forEach(d => d !== idleDlg && d.close());
+          idleDlg.showModal();
+          const end = lastActive + idleMs;
+          const tick = () => {
+            const s = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+            left.textContent = s;
+            if (!s) { clearInterval(countdown); idleDlg.querySelector("form").submit(); }
+          };
+          tick(); countdown = setInterval(tick, 1000);
+        }
+      }, 5000);
     })();
   </script>
 </body>

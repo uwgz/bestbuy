@@ -8,6 +8,7 @@
 {% set payload = data|tojson|forceescape %}
 <button type="button" data-dialog="sell" data-product='{{ payload }}' class="h-9 rounded-lg bg-brand px-3.5 text-sm font-semibold text-white transition hover:bg-brand-dark disabled:opacity-40"{{ ' disabled title="Sold out: refill first"' if not p.stock }}>Sell</button>
 <button type="button" data-dialog="refill" data-product='{{ payload }}' class="{{ tb }}">Refill</button>
+{% if can("admin.product_media") %}
 <button type="button" data-dialog="media" data-product='{{ payload }}' class="{{ tb }}" title="Photos and label">Photos</button>
 <button type="button" data-dialog="discount" data-product='{{ payload }}' aria-label="Discount on {{ p.short }}"
         title="{{ ('−' ~ p.discount ~ '% until ' ~ (p.discount_until.strftime('%b ') ~ p.discount_until.day if p.discount_until else 'no end date')) if p.on_sale else 'Give a discount' }}"
@@ -17,3 +18,4 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="_back" value="{{ request.full_path }}">
   <button class="{{ ib }}" aria-label="{{ 'Hide' if p.is_active else 'Show' }} {{ p.short }}" title="{{ 'Hide in the shop' if p.is_active else 'Show in the shop' }}">{{ icon("eye" if p.is_active else "eye-off", "size-4") }}</button>
 </form>
+{% endif %}

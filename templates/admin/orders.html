@@ -1,0 +1,122 @@
+{% extends "admin/base.html" %}
+{% block title %}Orders{% endblock %}
+{% block crumb %}Orders{% endblock %}
+{% block crumb_note %}<span class="text-zinc-400"> · {{ total }} sale{{ "s" if total != 1 }}</span>{% endblock %}
+{% set muted = "text-zinc-500 dark:text-zinc-400" %}
+{% set states = {"paid": ("Paid", "bg-emerald-500/12 text-emerald-700 dark:text-emerald-400"), "cancelled": ("Cancelled", "bg-zinc-200 text-zinc-600 dark:bg-white/10 dark:text-zinc-400"),
+                 "waiting": ("Waiting", "bg-amber-500/15 text-amber-700 dark:text-amber-400")} %}
+{% macro link() %}{{ url_for('admin.orders', **dict({"status": status, "q": q}, **kwargs)) }}{% endmacro %}
+
+{% block content %}
+<div class="flex flex-wrap items-start justify-between gap-4">
+  <div>
+    <h1 class="text-[28px] leading-tight">Orders</h1>
+    <p class="mt-1 text-[15px] {{ muted }}">Every sale made with Sell in Stock. Today so far: <b class="text-zinc-900 dark:text-white">{{ money(takings) }}</b></p>
+  </div>
+  <a href="{{ url_for('admin.stock') }}" class="btn h-11 rounded-xl px-4">{{ icon("bag", "size-4") }} Sell from Stock</a>
+</div>
+
+<div class="mt-6 flex flex-wrap items-center gap-3">
+  <nav class="flex rounded-xl bg-zinc-200/70 p-1 dark:bg-white/[.06]" aria-label="Status">
+    {% for key, label in [("", "All"), ("paid", "Paid"), ("cancelled", "Cancelled")] %}
+      <a href="{{ link(status=key, page=1) }}"{{ ' aria-current="page"' if key == status }}
+         class="whitespace-nowrap rounded-lg px-3.5 py-1.5 text-sm transition {{ 'bg-white font-semibold shadow-sm dark:bg-zinc-700' if key == status else 'text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-white' }}">{{ label }}{% if key %} <span class="{{ muted }} font-normal">{{ counts[key] }}</span>{% endif %}</a>
+    {% endfor %}
+  </nav>
+  <form method="get" class="relative min-w-56 flex-1 sm:max-w-sm">
+    <input type="hidden" name="status" value="{{ status }}">
+    <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">{{ icon("search", "size-4") }}</span>
+    <input name="q" value="{{ q }}" placeholder="Customer or order number" class="field rounded-xl py-2 pl-9">
+  </form>
+</div>
+
+{% if rows %}
+  <div class="mt-5 overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+    <div class="hidden grid-cols-[100px_110px_minmax(0,1fr)_150px_110px_40px] gap-4 border-b border-zinc-200 px-5 py-3 text-xs font-semibold uppercase tracking-wider text-zinc-400 md:grid dark:border-zinc-800">
+      <span>Order</span><span>Date</span><span>Customer · products</span><span class="text-right">Total</span><span>Status</span><span></span>
+    </div>
+    {% for o in rows %}
+      {% set st = states.get(o.status, states.paid) %}
+      <details class="group border-b border-zinc-100 last:border-0 dark:border-zinc-800 [&_summary::-webkit-details-marker]:hidden">
+        <summary class="grid cursor-pointer list-none grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-5 py-3.5 transition hover:bg-zinc-50 md:grid-cols-[100px_110px_minmax(0,1fr)_150px_110px_40px] dark:hover:bg-white/[.03]">
+          <span class="font-mono text-sm font-semibold">{{ o.number }}</span>
+          <span class="text-sm {{ muted }} max-md:order-3">{{ o.sold_on.strftime("%b") }} {{ o.sold_on.day }}, {{ o.sold_on.year }}</span>
+          <span class="min-w-0 max-md:order-5 max-md:col-span-2">
+            <b class="block truncate text-[15px] font-medium">{{ o.customer or "—" }}</b>
+            <span class="block truncate text-sm {{ muted }}">{% for i in o.items %}{{ i.qty }} × {{ i.product_name }}{{ ", " if not loop.last }}{% endfor %}</span>
+          </span>
+          <span class="text-right font-semibold tabular-nums max-md:order-2 {{ 'line-through text-zinc-400' if o.status == 'cancelled' }}">{{ money(o.total) }}</span>
+          <span class="max-md:order-4 max-md:text-right"><span class="rounded-full px-2.5 py-0.5 text-xs font-semibold {{ st[1] }}">{{ st[0] }}</span></span>
+          <span class="hidden justify-self-end text-zinc-400 transition group-open:rotate-180 md:block">{{ icon("chevron-down", "size-4") }}</span>
+        </summary>
+        <div class="bg-zinc-50 px-5 pb-4 pt-2 dark:bg-white/[.02]">
+          <table class="w-full text-sm">
+            <tbody>
+              {% for i in o.items %}
+                <tr class="border-b border-zinc-200/70 last:border-0 dark:border-zinc-800">
+                  <td class="py-2"><b class="font-medium">{{ i.product_name }}</b> <span class="font-mono text-xs text-zinc-400">{{ i.sku }}</span></td>
+                  <td class="py-2 text-right tabular-nums {{ muted }}">{{ i.qty }} × {{ money(i.unit_price) }}</td>
+                  <td class="w-36 py-2 text-right font-semibold tabular-nums">{{ money(i.line_total) }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+          <div class="mt-3 flex flex-wrap items-center justify-between gap-3">
+            <p class="text-sm {{ muted }}">Sold by {{ sellers.get(o.created_by, "—") }}{% if o.note %} · {{ o.note }}{% endif %}</p>
+            {% if o.status == "paid" and can("admin.order_cancel") %}
+              <button type="button" data-cancel="{{ url_for('admin.order_cancel', order_id=o.id) }}" data-number="{{ o.number }}" data-total="{{ money(o.total) }}"
+                      class="h-9 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-medium text-sale transition hover:border-sale dark:border-zinc-700 dark:bg-zinc-900">Cancel sale</button>
+            {% endif %}
+          </div>
+        </div>
+      </details>
+    {% endfor %}
+  </div>
+  {% if pages > 1 %}
+    <nav class="mt-5 flex items-center justify-center gap-2 text-sm" aria-label="Pages">
+      {% if page > 1 %}<a href="{{ link(page=page - 1) }}" class="inline-flex h-9 items-center gap-1 rounded-lg border border-zinc-200 px-3 hover:border-zinc-400 dark:border-zinc-700">{{ icon("chevron-left", "size-4") }} Newer</a>{% endif %}
+      <span class="px-2 {{ muted }}">Page {{ page }} of {{ pages }}</span>
+      {% if page < pages %}<a href="{{ link(page=page + 1) }}" class="inline-flex h-9 items-center gap-1 rounded-lg border border-zinc-200 px-3 hover:border-zinc-400 dark:border-zinc-700">Older {{ icon("chevron-right", "size-4") }}</a>{% endif %}
+    </nav>
+  {% endif %}
+{% else %}
+  <div class="mt-6 grid place-items-center rounded-2xl border border-dashed border-zinc-300 px-6 py-16 text-center dark:border-zinc-700">
+    <span class="grid size-14 place-items-center rounded-2xl bg-brand/10 text-brand">{{ icon("receipt", "size-7") }}</span>
+    <p class="mt-4 text-lg font-semibold">{{ "No sales match" if q or status else "No sales yet" }}</p>
+    <p class="mt-1 max-w-sm text-[15px] {{ muted }}">{{ "Try another name or number." if q or status else "Sales appear here when you press Sell on a product in Stock." }}</p>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block dialogs %}
+<dialog id="dlg-cancel" class="m-auto w-[min(420px,calc(100vw-2rem))] rounded-2xl border border-zinc-200 bg-white p-0 text-zinc-900 shadow-2xl backdrop:bg-black/55 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100">
+  <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="_back" value="{{ request.full_path }}">
+    <div class="px-5 pb-2 pt-6 text-center">
+      <span class="mx-auto grid size-12 place-items-center rounded-2xl bg-red-500/10 text-red-600 dark:text-red-400">{{ icon("undo", "size-6") }}</span>
+      <h2 class="mt-3 text-lg">Cancel sale <span data-number></span>?</h2>
+      <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">The units go back in stock and <b data-total></b> counts as money given back.</p>
+    </div>
+    <div class="flex justify-center gap-2 px-5 pb-6 pt-4">
+      <button type="button" data-close class="h-10 rounded-lg border border-zinc-200 px-4 text-[15px] font-medium hover:border-zinc-400 dark:border-zinc-700">Keep it</button>
+      <button class="h-10 rounded-lg bg-red-600 px-5 text-[15px] font-semibold text-white hover:bg-red-700" data-submit>Cancel sale</button>
+    </div>
+  </form>
+</dialog>
+<script>
+  (() => {
+    const d = document.getElementById("dlg-cancel");
+    document.addEventListener("click", e => {
+      const b = e.target.closest("[data-cancel]");
+      if (b) {
+        d.querySelector("form").action = b.dataset.cancel;
+        d.querySelector("[data-number]").textContent = b.dataset.number;
+        d.querySelector("[data-total]").textContent = b.dataset.total;
+        d.showModal(); return;
+      }
+      if (e.target === d || e.target.closest("[data-close]")) d.close();
+    });
+    d.addEventListener("submit", () => { const s = d.querySelector("[data-submit]"); s.disabled = true; s.textContent = "Cancelling…"; });
+  })();
+</script>
+{% endblock %}

@@ -45,7 +45,8 @@ class Config:
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_SECURE = bool(os.environ.get("VERCEL"))
-    PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 14      # stay signed in for two weeks
+    PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 14      # the sign-in cookie lasts two weeks at most…
+    ADMIN_IDLE_MINUTES = int(os.environ.get("ADMIN_IDLE_MINUTES", "15"))   # …but 15 minutes without activity signs you out
     TIMEZONE = os.environ.get("TIMEZONE", "Africa/Kigali")
     SQLALCHEMY_DATABASE_URI = database_url()
     SQLALCHEMY_ENGINE_OPTIONS = engine_options(SQLALCHEMY_DATABASE_URI)

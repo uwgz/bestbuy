@@ -269,17 +269,35 @@ class HeroSlide(TimestampMixin, OrderedMixin, db.Model):
 
 
 # ---------------------------------------------------------------- admin
+ROLES = {
+    "owner": ("Owner", "Everything, including employees and settings"),
+    "manager": ("Manager", "Everything except employees and settings"),
+    "employee": ("Employee", "Sell, refill and returns in Stock; giveaway codes"),
+}
+
+
 class User(TimestampMixin, db.Model):
-    """Someone who can sign in to /admin."""
+    """Someone who can sign in to /admin. `role` says what they may do (see ROLES and admin.ACCESS)."""
 
     __tablename__ = "users"
+    __table_args__ = (db.CheckConstraint("role IN ('owner', 'manager', 'employee')", name="ck_users_role"),)
 
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), nullable=False)
     email = db.Column(db.String(160), unique=True, nullable=False, index=True)   # stored lower-case
     password_hash = db.Column(db.String(256), nullable=False)
-    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    role = db.Column(db.String(10), nullable=False, default="employee")
+    is_active = db.Column(db.Boolean, nullable=False, default=True)                 # False = access removed
     last_login_at = db.Column(db.DateTime(timezone=True))
+    failed_logins = db.Column(db.Integer, nullable=False, default=0)                # wrong passwords / answers in a row
+    locked_until = db.Column(db.DateTime(timezone=True))                            # too many: wait until then
+
+    questions = db.relationship("SecurityQuestion", order_by="SecurityQuestion.position",
+                                cascade="all, delete-orphan", lazy="selectin")
+
+    @property
+    def role_label(self):
+        return ROLES.get(self.role, ("Employee",))[0]
 
     def set_password(self, password):
         from werkzeug.security import generate_password_hash
@@ -292,6 +310,31 @@ class User(TimestampMixin, db.Model):
     @property
     def first_name(self):
         return self.name.split()[0] if self.name else "Owner"
+
+
+def normal_answer(text):
+    """Answers count the same whatever the capitals, spaces or end punctuation: " Kigali. " = "kigali"."""
+    return " ".join((text or "").lower().split()).strip(".!?,;:'\"")
+
+
+class SecurityQuestion(db.Model):
+    """One of a user's five questions. The answer is kept only as a hash, like a password."""
+
+    __tablename__ = "security_questions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    position = db.Column(db.Integer, nullable=False, default=0)
+    question = db.Column(db.String(200), nullable=False)
+    answer_hash = db.Column(db.String(256), nullable=False)
+
+    def set_answer(self, answer):
+        from werkzeug.security import generate_password_hash
+        self.answer_hash = generate_password_hash(normal_answer(answer))
+
+    def check_answer(self, answer):
+        from werkzeug.security import check_password_hash
+        return check_password_hash(self.answer_hash, normal_answer(answer))
 
 
 class Order(TimestampMixin, db.Model):
