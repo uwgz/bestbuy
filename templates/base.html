@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>{% block title %}{{ store.tagline }}{% endblock %} | {{ store.name }}</title>
+  {% block head %}{% endblock %}
   <meta name="description" content="{{ store.name }}: phones, laptops, TVs, audio, cameras and professional photography.">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
@@ -123,7 +124,7 @@
        class="pointer-events-none fixed bottom-6 left-1/2 z-50 -translate-x-1/2 translate-y-4 rounded-full bg-zinc-900 px-5 py-2.5 text-[15px] text-white opacity-0 transition duration-300 dark:bg-white dark:text-zinc-900"></div>
 
   {# ---------- giveaway: a random visitor wins (see /giveaway/draw) ---------- #}
-  <dialog id="prize" tabindex="-1" data-giveaways="{{ giveaway_on() }}" data-draw="{{ url_for('giveaway_draw') }}"
+  <dialog id="prize" tabindex="-1" data-giveaways="{{ '' if no_giveaway else giveaway_on() }}" data-draw="{{ url_for('giveaway_draw') }}"
           class="m-auto w-[min(440px,calc(100vw-2rem))] overflow-hidden rounded-3xl outline-none bg-white p-0 text-center text-zinc-900 shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm dark:bg-zinc-900 dark:text-zinc-100">
     <div class="relative bg-gradient-to-b from-brand/15 to-transparent px-6 pb-2 pt-8">
       <button type="button" data-prize-close class="absolute right-3 top-3 grid size-9 place-items-center rounded-full text-zinc-500 hover:bg-black/5 dark:hover:bg-white/10" aria-label="Close">{{ icon("x", "size-5") }}</button>

@@ -711,6 +711,9 @@
   .min-h-\[calc\(100dvh-7\.5rem\)\] {
     min-height: calc(100dvh - 7.5rem);
   }
+  .min-h-\[calc\(100dvh-16rem\)\] {
+    min-height: calc(100dvh - 16rem);
+  }
   .min-h-dvh {
     min-height: 100dvh;
   }
@@ -1632,9 +1635,6 @@
   .py-6 {
     padding-block: calc(var(--spacing) * 6);
   }
-  .py-10 {
-    padding-block: calc(var(--spacing) * 10);
-  }
   .py-12 {
     padding-block: calc(var(--spacing) * 12);
   }
@@ -1879,6 +1879,10 @@
     --tw-tracking: 0.08em;
     letter-spacing: 0.08em;
   }
+  .tracking-\[0\.12em\] {
+    --tw-tracking: 0.12em;
+    letter-spacing: 0.12em;
+  }
   .tracking-tight {
     --tw-tracking: var(--tracking-tight);
     letter-spacing: var(--tracking-tight);
@@ -2031,6 +2035,10 @@
   }
   .shadow-\[-8px_10px_30px_-10px_rgba\(0\,0\,0\,\.35\)\] {
     --tw-shadow: -8px 10px 30px -10px var(--tw-shadow-color, rgba(0,0,0,.35));
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  .shadow-\[0_20px_50px_-20px_rgba\(0\,0\,0\,\.15\)\] {
+    --tw-shadow: 0 20px 50px -20px var(--tw-shadow-color, rgba(0,0,0,.15));
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
   .shadow-lg {
@@ -2566,6 +2574,9 @@
     .sm\:p-6 {
       padding: calc(var(--spacing) * 6);
     }
+    .sm\:p-7 {
+      padding: calc(var(--spacing) * 7);
+    }
     .sm\:p-8 {
       padding: calc(var(--spacing) * 8);
     }
@@ -2598,6 +2609,9 @@
     }
     .sm\:py-8 {
       padding-block: calc(var(--spacing) * 8);
+    }
+    .sm\:py-16 {
+      padding-block: calc(var(--spacing) * 16);
     }
     .sm\:pt-8 {
       padding-top: calc(var(--spacing) * 8);
@@ -2828,6 +2842,9 @@
   .dark\:bg-\[\#161617\]:where(.dark, .dark *) {
     background-color: #161617;
   }
+  .dark\:bg-\[\#161618\]:where(.dark, .dark *) {
+    background-color: #161618;
+  }
   .dark\:bg-amber-500\/10:where(.dark, .dark *) {
     background-color: color-mix(in srgb, oklch(76.9% 0.188 70.08) 10%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -3015,6 +3032,10 @@
   }
   .dark\:shadow-\[-8px_10px_30px_-8px_rgba\(0\,0\,0\,\.9\)\]:where(.dark, .dark *) {
     --tw-shadow: -8px 10px 30px -8px var(--tw-shadow-color, rgba(0,0,0,.9));
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+  .dark\:shadow-none:where(.dark, .dark *) {
+    --tw-shadow: 0 0 #0000;
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
   .dark\:shadow-orange-500\/40:where(.dark, .dark *) {
