@@ -179,21 +179,43 @@
     render();
   }
 
-  // ---------- product photos: swipe, dots, thumbnails ----------
+  // ---------- product photos: they move on by themselves (the dash fills up until the next one), like the
+  // home slideshow. ❚❚ pauses, ▶ plays again; tapping a dot jumps there; swiping takes over (paused). ----------
   const gallery = $("[data-gallery]");
   if (gallery) {
-    const track = $("[data-track]", gallery), dots = $$("[data-dot]", gallery), thumbs = $$("[data-thumb]", gallery);
-    const on = "bg-zinc-900 dark:bg-white".split(" "), off = "bg-zinc-300 dark:bg-zinc-700".split(" ");
-    const paint = i => {
-      dots.forEach((d, k) => { d.classList.remove(...(k === i ? off : on)); d.classList.add(...(k === i ? on : off)); });
-      thumbs.forEach((t, k) => { t.classList.toggle("border-brand", k === i); t.classList.toggle("border-transparent", k !== i); });
+    const track = $("[data-track]", gallery), dots = $$("[data-dot]", gallery), play = $("[data-play]", gallery);
+    const count = dots.length, SECONDS = 4;
+    let current = 0, timer = null;
+    const fill = () => dots.forEach((d, k) => {
+      const f = $("[data-fill]", d);
+      if (!f) return;
+      f.style.animation = "none"; void f.offsetWidth;                          // restart the filling
+      f.style.animation = timer && k === current ? `slide-fill ${SECONDS}s linear forwards` : "";
+      f.style.width = timer ? "" : "100%";                                     // paused: the dash stays full
+    });
+    const paint = i => { current = i; dots.forEach((d, k) => { d.toggleAttribute("data-active", k === i); d.setAttribute("aria-selected", k === i); }); fill(); };
+    const go = i => { track.scrollTo({ left: i * track.clientWidth, behavior: "smooth" }); paint(i); };
+    const tick = () => go((current + 1) % count);
+    const start = () => {
+      clearInterval(timer); timer = setInterval(tick, SECONDS * 1000);
+      play?.setAttribute("aria-pressed", "true"); play?.setAttribute("aria-label", "Pause the photos"); fill();
     };
-    track.addEventListener("scroll", () => paint(Math.round(track.scrollLeft / track.clientWidth)), { passive: true });
-    thumbs.forEach(t => t.addEventListener("click", () => {
-      const i = Number(t.dataset.thumb);
-      track.scrollTo({ left: i * track.clientWidth, behavior: "smooth" });
-      paint(i);
-    }));
+    const stop = () => {
+      clearInterval(timer); timer = null;
+      play?.setAttribute("aria-pressed", "false"); play?.setAttribute("aria-label", "Play the photos"); fill();
+    };
+    track.addEventListener("scroll", () => {
+      const i = Math.round(track.scrollLeft / track.clientWidth);
+      if (i !== current) paint(i);
+    }, { passive: true });
+    ["pointerdown", "touchstart", "wheel"].forEach(ev => track.addEventListener(ev, () => timer && stop(), { passive: true }));
+    dots.forEach(d => d.addEventListener("click", () => { go(Number(d.dataset.dot)); if (timer) start(); }));
+    play?.addEventListener("click", () => (timer ? stop() : (tick(), start())));
+    document.addEventListener("visibilitychange", () => { if (document.hidden && timer) { clearInterval(timer); timer = -1; } else if (!document.hidden && timer === -1) start(); });
+    addEventListener("resize", () => track.scrollTo({ left: current * track.clientWidth }));   // stay on the same photo
+    if (count > 1) {
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches) stop(); else start();   // plays when the page opens
+    }
   }
 
   // ---------- home slideshow: endless loop, moves on by itself; the filling dot shows when ----------
