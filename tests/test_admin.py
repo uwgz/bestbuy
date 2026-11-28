@@ -369,10 +369,11 @@ def test_upload_sends_the_photo_to_blob(owner, monkeypatch):
     assert upload(owner, data=b"\xff\xd8\xff" + b"0" * (5 * 1024 * 1024)).status_code == 400   # 4 MB at most
 
 
-def test_upload_needs_the_blob_token_and_a_sign_in(owner, app, monkeypatch):
-    monkeypatch.delenv("BLOB_READ_WRITE_TOKEN", raising=False)
+def test_upload_needs_the_blob_store_and_a_sign_in(owner, app, monkeypatch):
+    for name in ("BLOB_READ_WRITE_TOKEN", "BLOB_STORE_ID", "VERCEL_OIDC_TOKEN", "VERCEL_OIDC_TOKEN_FILE"):
+        monkeypatch.delenv(name, raising=False)
     res = upload(owner)
-    assert res.status_code == 502 and "BLOB_READ_WRITE_TOKEN" in res.get_json()["error"]
+    assert res.status_code == 502 and "Blob store" in res.get_json()["error"]
     stranger = app.test_client()
     assert stranger.post("/admin/upload").status_code in (302, 400)                            # not signed in
 
@@ -382,6 +383,8 @@ def test_blob_request_matches_vercel(monkeypatch):
     import json
     import urllib.request
     from bestbuy import blob
+    for name in ("BLOB_STORE_ID", "VERCEL_OIDC_TOKEN", "VERCEL_OIDC_TOKEN_FILE"):
+        monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("BLOB_READ_WRITE_TOKEN", "vercel_blob_rw_sBY6aJKsF2Etw1FH_secret")
     seen = {}
     class Answer:
@@ -550,3 +553,25 @@ def test_orders_list_and_cancel(owner):
     assert back.qty == 2 and back.amount == 370000
     post(owner, f"/admin/orders/{order.id}/cancel")                                          # not twice
     assert db.session.get(Product, p.id).stock == 7
+
+
+def test_blob_uses_vercels_own_token_with_the_store_id(app, monkeypatch):
+    """Newer Vercel projects: no BLOB_READ_WRITE_TOKEN, but BLOB_STORE_ID + the token Vercel sends with each request."""
+    import json
+    import urllib.request
+    from bestbuy import blob
+    monkeypatch.delenv("BLOB_READ_WRITE_TOKEN", raising=False)
+    monkeypatch.delenv("VERCEL_OIDC_TOKEN", raising=False)
+    monkeypatch.setenv("BLOB_STORE_ID", "store_sBY6aJKsF2Etw1FH")
+    seen = {}
+    class Answer:
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+        def read(self): return json.dumps({"url": "https://x.public.blob.vercel-storage.com/a-1.jpg"}).encode()
+    def fake_open(req, timeout):
+        seen.update({k.lower(): v for k, v in req.header_items()})
+        return Answer()
+    monkeypatch.setattr(urllib.request, "urlopen", fake_open)
+    with app.test_request_context(headers={"x-vercel-oidc-token": "vercel-oidc"}):
+        blob.put("a.jpg", b"1", "image/jpeg")
+    assert seen["authorization"] == "Bearer vercel-oidc" and seen["x-vercel-blob-store-id"] == "sBY6aJKsF2Etw1FH"

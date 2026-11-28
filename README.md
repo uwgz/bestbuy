@@ -62,15 +62,17 @@ Security:
 - Every action is written to the `audit_logs` table (who, what, when, from where).
 
 Photos are uploaded from the admin pop-ups to **Vercel Blob** (folders `products/`, `gear/`, `services/`,
-`portfolio/`). Vercel adds `BLOB_READ_WRITE_TOKEN` to the project when the Blob store is connected to it;
-to upload while running the site on your computer, put it in `.env` too.
+`portfolio/`). Connecting the Blob store to the project adds `BLOB_STORE_ID`; the deployed site then signs uploads
+with the token Vercel gives every request (OIDC), so nothing else is needed. Older connections add
+`BLOB_READ_WRITE_TOKEN` instead, which also works. To upload while running the site on your computer, run
+`vercel env pull .env` (adds a 12-hour `VERCEL_OIDC_TOKEN`) or put a `BLOB_READ_WRITE_TOKEN` in `.env`.
 
 ## Host on Vercel
 1. Push to GitHub. Vercel builds it.
 2. Vercel → Settings → Environment Variables: `DATABASE_URL` = your Neon connection string
    (or connect Neon in Vercel's Storage tab, which adds it for you), and `SECRET_KEY` = a long random text
    (`python -c "import secrets; print(secrets.token_hex(32))"`), type **Secret**. Connect your Blob store to the
-   project (Storage → your store → Projects) so `BLOB_READ_WRITE_TOKEN` is there for photo uploads. Redeploy.
+   project (Storage → your store → Projects) so `BLOB_STORE_ID` is there for photo uploads. Redeploy.
 3. The first visit creates the tables and loads the starting content.
 
 ## Styles (Tailwind CSS)
