@@ -3,7 +3,8 @@ Photography (/admin/photography): what the public Photography page shows, in thr
 
     Gear        name, price in Canadian dollars, photos
     Services    the studio's services (name, "from" price, duration, icon, photo, description)
-    Portfolio   photos, each with the Instagram account of the person in it
+    Portfolio   photos (several at once), each with the Instagram account of the person in it
+Photos are uploaded from the phone or computer to Vercel Blob (admin_upload.py); the forms carry their addresses.
 Each tab has + Add, and every item can be removed (gear and services can also be edited).
 """
 import re
@@ -33,7 +34,7 @@ def photography():
 def _photo(value, label="Photo"):
     value = (value or "").strip()
     if not (value.startswith("https://") or value.startswith("/static/")):
-        raise FormError(f"{label}: paste the full link, starting with https://")
+        raise FormError(f"{label}: upload the photo again.")
     return value[:500]
 
 
@@ -66,7 +67,12 @@ def instagram_link(value):
 
 
 def _portfolio(f):
-    return {"photo": _photo(f.get("photo")), "instagram": instagram_link(f.get("instagram"))}
+    """Several photos of the same person: one portfolio item per photo."""
+    instagram = instagram_link(f.get("instagram"))
+    photos = [_photo(line) for line in (f.get("photos") or "").splitlines() if line.strip()]
+    if not photos:
+        raise FormError("Add at least one photo.")
+    return [{"photo": photo, "instagram": instagram} for photo in photos]
 
 
 READERS = {"gear": _gear, "services": _service, "portfolio": _portfolio}
@@ -90,13 +96,14 @@ def photography_add(kind):
     model = MODELS[kind]
     try:
         data = READERS[kind](request.form)
-        last = db.session.query(db.func.max(model.position)).scalar()
-        row = model(position=(last or 0) + 1, is_active=True, **data)
-        db.session.add(row)
+        last = db.session.query(db.func.max(model.position)).scalar() or 0
+        rows = [model(position=last + i + 1, is_active=True, **d) for i, d in enumerate(data if isinstance(data, list) else [data])]
+        db.session.add_all(rows)
         db.session.flush()
-        audit(f"photography.{kind}.add", f"#{row.id} {_label(kind, row)}")
+        audit(f"photography.{kind}.add", ", ".join(f"#{r.id} {_label(kind, r)}" for r in rows))
         db.session.commit()
-        flash(f"{NAMES[kind]} added. It shows on the Photography page now.", "success")
+        many = len(rows) > 1
+        flash(f"{len(rows)} photos added. They show on the Photography page now." if many else f"{NAMES[kind]} added. It shows on the Photography page now.", "success")
     except FormError as e:
         db.session.rollback()
         flash(str(e), "error")

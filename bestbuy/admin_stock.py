@@ -119,7 +119,7 @@ def product_add():
         db.session.flush()
         _move(product, "added", units, product.cost, product.cost * units, today(), "New product")
         audit("product.add", f"{product.sku} {product.short}: {units} units at {product.cost}")
-        return _done(f"{product.short} added ({product.sku}). Add its photos with “Photos & discount”.")
+        return _done(f"{product.short} added ({product.sku}). Add its photos with “Photos”.")
     except FormError as e:
         return _failed(e)
 
@@ -151,7 +151,7 @@ def product_media(product_id):
         photos = [line.strip() for line in (f.get("photos") or "").splitlines() if line.strip()]
         for url in photos:
             if not (url.startswith("https://") or url.startswith("/static/")):
-                raise FormError("Photo links must start with https:// (one link per line).")
+                raise FormError("A photo didn't upload properly: remove it and upload it again.")
         product.badge = text(f, "badge", "the label", required=False, limit=32)
         if [p.url for p in product.photo_rows] != photos:
             product.photo_rows = [ProductPhoto(url=url, position=k) for k, url in enumerate(photos)]

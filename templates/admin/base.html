@@ -113,6 +113,7 @@
   </div>
 
   {% block dialogs %}{% endblock %}
+  <script src="{{ url_for('static', filename='js/admin-photos.js') }}" defer></script>
   <script>
     (() => {
       const root = document.documentElement, $ = s => document.querySelector(s);

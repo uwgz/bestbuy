@@ -1,0 +1,16 @@
+{# Photo picker: choose photos from the phone or computer; each one is made smaller and uploaded to Vercel Blob
+   (public/static/js/admin-photos.js). The chosen photos' addresses go in the hidden field `name`, one per line. #}
+{% macro photo_picker(name, folder, multiple=True, required=False, label="Photos") %}
+<div data-photos data-folder="{{ folder }}" data-multiple="{{ 1 if multiple else 0 }}" data-required="{{ 1 if required else 0 }}" data-upload="{{ url_for('admin.upload') }}">
+  <p class="text-sm font-medium text-zinc-700 dark:text-zinc-300">{{ label }}
+    {%- if multiple %} <span class="font-normal text-zinc-400">(the first is the cover: tap a photo to make it the cover)</span>{% endif %}</p>
+  <textarea name="{{ name }}" hidden data-photos-value></textarea>
+  <div class="mt-1.5 grid gap-2 {{ 'grid-cols-4 sm:grid-cols-5' if multiple else 'grid-cols-1' }}" data-photos-list>
+    <label data-photos-add class="grid aspect-square cursor-pointer place-items-center rounded-xl border-2 border-dashed border-zinc-300 text-zinc-500 transition hover:border-brand hover:text-brand dark:border-zinc-700 dark:text-zinc-400">
+      <span class="grid justify-items-center gap-1 text-center text-xs font-medium">{{ icon("plus", "size-5") }}{{ "Add photos" if multiple else "Add photo" }}</span>
+      <input type="file" accept="image/*" class="sr-only" data-photos-input{{ " multiple" if multiple }}>
+    </label>
+  </div>
+  <p data-photos-error hidden class="mt-1.5 text-sm font-medium text-sale"></p>
+</div>
+{% endmacro %}

@@ -329,12 +329,70 @@ def test_services_add_and_remove(owner, client):
 
 def test_portfolio_photo_with_instagram(owner, client):
     PortfolioItem.query.delete(); db.session.commit()
-    post(owner, "/admin/photography/portfolio/add", photo="https://images.unsplash.com/photo-5", instagram="not an account!")
-    for account in ("@aline.rw", "https://www.instagram.com/aline.rw/?hl=en"):
-        post(owner, "/admin/photography/portfolio/add", photo="https://images.unsplash.com/photo-5", instagram=account)
+    post(owner, "/admin/photography/portfolio/add", photos="https://images.unsplash.com/photo-5", instagram="not an account!")
+    post(owner, "/admin/photography/portfolio/add", photos="", instagram="@aline.rw")                # a photo is required
+    post(owner, "/admin/photography/portfolio/add", photos="https://blob.example/p/1.jpg\nhttps://blob.example/p/2.jpg",
+         instagram="@aline.rw")                                                                     # several at once
+    post(owner, "/admin/photography/portfolio/add", photos="https://images.unsplash.com/photo-5",
+         instagram="https://www.instagram.com/aline.rw/?hl=en")
     items = PortfolioItem.query.all()
-    assert len(items) == 2 and all(i.instagram == "https://www.instagram.com/aline.rw/" and i.handle == "@aline.rw" for i in items)
+    assert len(items) == 3 and all(i.instagram == "https://www.instagram.com/aline.rw/" and i.handle == "@aline.rw" for i in items)
     assert "@aline.rw" in client.get("/photography").get_data(as_text=True)
     item_id = items[0].id
     post(owner, f"/admin/photography/portfolio/{item_id}/remove")
-    assert PortfolioItem.query.count() == 1
+    assert PortfolioItem.query.count() == 2
+
+
+# ---------------------------------------------------------------- photo uploads (Vercel Blob)
+JPEG = b"\xff\xd8\xff\xe0" + b"0" * 2000
+
+
+def upload(c, data=JPEG, folder="products", name="iPhone 17 Pro"):
+    from io import BytesIO
+    return c.post("/admin/upload", data={"csrf_token": c.token, "folder": folder, "name": name,
+                                         "file": (BytesIO(data), "photo.jpg")}, content_type="multipart/form-data")
+
+
+def test_upload_sends_the_photo_to_blob(owner, monkeypatch):
+    from bestbuy import blob
+    sent = {}
+    def fake_put(pathname, data, content_type):
+        sent.update(pathname=pathname, size=len(data), content_type=content_type)
+        return f"https://store.public.blob.vercel-storage.com/{pathname}"
+    monkeypatch.setattr(blob, "put", fake_put)
+    res = upload(owner)
+    assert res.status_code == 200 and res.get_json()["url"].endswith(".jpg")
+    assert sent["pathname"].startswith("products/iphone-17-pro-") and sent["content_type"] == "image/jpeg"
+    assert upload(owner, data=b"%PDF-1.7 not a photo").status_code == 400                     # photos only
+    assert upload(owner, folder="../secrets").status_code == 400                                # known folders only
+    assert upload(owner, data=b"\xff\xd8\xff" + b"0" * (5 * 1024 * 1024)).status_code == 400   # 4 MB at most
+
+
+def test_upload_needs_the_blob_token_and_a_sign_in(owner, app, monkeypatch):
+    monkeypatch.delenv("BLOB_READ_WRITE_TOKEN", raising=False)
+    res = upload(owner)
+    assert res.status_code == 502 and "BLOB_READ_WRITE_TOKEN" in res.get_json()["error"]
+    stranger = app.test_client()
+    assert stranger.post("/admin/upload").status_code in (302, 400)                            # not signed in
+
+
+def test_blob_request_matches_vercel(monkeypatch):
+    """The request Vercel Blob expects: PUT https://vercel.com/api/blob/?pathname=..., API version 13, public."""
+    import json
+    import urllib.request
+    from bestbuy import blob
+    monkeypatch.setenv("BLOB_READ_WRITE_TOKEN", "vercel_blob_rw_sBY6aJKsF2Etw1FH_secret")
+    seen = {}
+    class Answer:
+        def __enter__(self): return self
+        def __exit__(self, *a): pass
+        def read(self): return json.dumps({"url": "https://x.public.blob.vercel-storage.com/products/a-1.jpg"}).encode()
+    def fake_open(req, timeout):
+        seen.update(url=req.full_url, method=req.get_method(), headers={k.lower(): v for k, v in req.header_items()})
+        return Answer()
+    monkeypatch.setattr(urllib.request, "urlopen", fake_open)
+    assert blob.put("products/a.jpg", b"123", "image/jpeg").endswith("/products/a-1.jpg")
+    h = seen["headers"]
+    assert seen["method"] == "PUT" and seen["url"] == "https://vercel.com/api/blob/?pathname=products%2Fa.jpg"
+    assert h["authorization"] == "Bearer vercel_blob_rw_sBY6aJKsF2Etw1FH_secret" and h["x-api-version"] == "13"
+    assert h["x-vercel-blob-access"] == "public" and h["x-vercel-blob-store-id"] == "sBY6aJKsF2Etw1FH"
