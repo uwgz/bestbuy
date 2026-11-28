@@ -21,7 +21,10 @@
       <div id="service-{{ loop.index }}" class="flex scroll-mt-24 flex-col overflow-hidden rounded-3xl border border-zinc-200 dark:border-zinc-800">
         <div class="relative aspect-[16/9] overflow-hidden bg-zinc-100 dark:bg-zinc-900">
           <span class="absolute inset-0 grid place-items-center text-zinc-300 dark:text-zinc-700">{{ icon(s.icon, "size-12 stroke-[1.2]") }}</span>
-          <img src="{{ s.photo }}" alt="{{ s.name }}" loading="lazy" onerror="this.remove()" class="absolute inset-0 size-full object-cover">
+          {# the whole photo, never cropped (a portrait keeps its framing, a passport photo its white background);
+             the space around it is the same photo, blurred #}
+          <img src="{{ s.photo }}" alt="" aria-hidden="true" loading="lazy" onerror="this.remove()" class="absolute inset-0 size-full scale-110 object-cover opacity-70 blur-2xl saturate-150">
+          <img src="{{ s.photo }}" alt="{{ s.name }}" loading="lazy" onerror="this.remove()" class="absolute inset-0 size-full object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,.25)]">
         </div>
         <div class="flex flex-1 flex-col p-6">
         <div class="flex items-center gap-3">
